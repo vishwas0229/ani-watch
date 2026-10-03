@@ -1,9 +1,7 @@
-import asyncio
-
 import pytest
 
-from ani_watch.domain.models import AnimeRef, EpisodeRef
 from ani_watch.domain.errors import ProviderError
+from ani_watch.domain.models import AnimeRef, EpisodeRef
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.registry import ProviderRegistry
 from ani_watch.providers.resilience import CircuitBreaker, ProviderHealth, ProviderResolver
