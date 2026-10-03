@@ -19,5 +19,6 @@ def doctor() -> None:
 def root(ctx: typer.Context) -> None:
     """Launch Ani-Watch or run a subcommand."""
     if ctx.invoked_subcommand is None:
-        typer.echo("Ani-Watch v0.1.0")
-        typer.echo("Foundation ready. TUI and playback modules will be added next.")
+        from ani_watch.tui.app import AniWatchApp
+
+        AniWatchApp().run()
