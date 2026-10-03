@@ -56,21 +56,24 @@ uv run ruff format --check .
 
 ## Architecture
 
-The project is intentionally split into layers so the terminal UI, CLI, business services, external APIs, storage, and player integration can evolve independently.
+Ani-Watch uses explicit package boundaries so the UI, business logic, external services, persistence, and playback engine can evolve independently.
 
 ```text
 CLI / TUI
-   ↓
+    ↓
 Application Services
-   ↓
+    ↓
 Domain
-   ↓
-Adapters
- ├── AniList
- ├── PostgreSQL
- ├── VLC
- └── Redis
+    ↓
+Adapters / Infrastructure
+    ├── Metadata (AniList)
+    ├── Storage (PostgreSQL)
+    ├── Player (VLC)
+    ├── Providers / Resolvers
+    └── Cache (Redis)
 ```
+
+See [Architecture](docs/architecture.md) for the package responsibilities and dependency direction.
 
 ## Roadmap
 
