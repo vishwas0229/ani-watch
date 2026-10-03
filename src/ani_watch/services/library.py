@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from ani_watch.domain.history import WatchHistoryEntry
+from ani_watch.domain.models import WatchHistoryEntry
 from ani_watch.storage.database import Database
 from ani_watch.storage.models import AnimeRecord, HistoryRecord, ProgressRecord
 from ani_watch.storage.repositories import AnimeRepository, FavoriteRepository, HistoryRepository, ProgressRepository
