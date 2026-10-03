@@ -5,7 +5,6 @@ from ani_watch.domain.models import (
     LibrarySnapshot,
     RecentlyWatchedItem,
 )
-
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.library import LibraryScreen
 
