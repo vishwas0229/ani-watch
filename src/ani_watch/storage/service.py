@@ -37,7 +37,6 @@ class LibraryService:
             episode_repo = EpisodeRepository(session)
             record = anime_repo.upsert(anime)
             for episode in episodes:
-                episode.anime_id = anime.anilist_id
                 episode_repo.upsert(record, episode)
             session.commit()
 
