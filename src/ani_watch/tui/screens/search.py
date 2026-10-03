@@ -166,7 +166,7 @@ class SearchScreen(Screen[None]):
         )
 
     async def _open_details(self, anime_id: int) -> None:
-        service = self.service or self._default_service()
+        service = self.service or build_metadata_service()
         try:
             details = await service.details(anime_id)
         except Exception as exc:
@@ -175,20 +175,6 @@ class SearchScreen(Screen[None]):
             )
             return
         self.app.push_screen(AnimeDetailsScreen(details))
-
-    @staticmethod
-    def _default_service() -> AniListMetadataService:
-        """Build the metadata service from local configuration."""
-        from ani_watch.auth.anilist import TokenStore
-        from ani_watch.config.store import SettingsStore
-
-        settings = SettingsStore().load()
-        client = AniListClient(
-            url=settings.anilist.graphql_url,
-            access_token=TokenStore().load(),
-            timeout=settings.providers.timeout_seconds,
-        )
-        return AniListMetadataService(client)
 
     def action_focus_search(self) -> None:
         """Focus the search input from the keyboard."""
