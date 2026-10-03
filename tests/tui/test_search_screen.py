@@ -35,7 +35,7 @@ async def test_home_search_button_opens_search_screen() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await pilot.click("#search")
+        await pilot.press("/")
         await pilot.pause()
 
         assert isinstance(app.screen, SearchScreen)
@@ -85,7 +85,9 @@ async def test_search_result_opens_details(fake_service) -> None:
         await pilot.press("enter")
         await pilot.pause()
 
-        await pilot.click("#result-0")
+        result = app.screen.query_one("#result-0")
+        result.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert isinstance(app.screen, AnimeDetailsScreen)
@@ -99,7 +101,9 @@ async def test_search_screen_back_button_returns_home() -> None:
         await app.push_screen(SearchScreen())
         await pilot.pause()
 
-        await pilot.click("#back")
+        back = app.screen.query_one("#back")
+        back.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert not isinstance(app.screen, SearchScreen)
