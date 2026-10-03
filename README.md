@@ -29,9 +29,7 @@ Supported Python version: **3.12+**
 
 ## Conda setup
 
-### Recommended: create the project environment
-
-From the repository root:
+Create the project environment from the repository root:
 
 ```bash
 conda env create -f environment.yml
@@ -39,24 +37,6 @@ conda activate ani-watch
 ```
 
 The environment file installs the project in editable mode together with the development dependencies.
-
-### Existing Conda environment
-
-You can also use an existing Conda environment such as `dev`:
-
-```bash
-conda activate dev
-python -m pip install -e ".[dev]"
-```
-
-### Verify Conda
-
-```bash
-conda info --envs
-echo "$CONDA_PREFIX"
-```
-
-`CONDA_PREFIX` should point to the active Conda environment.
 
 ## Run Ani-Watch
 
@@ -74,7 +54,7 @@ ani-watch doctor
 python -m ani_watch
 ```
 
-All application entry points require an active Conda environment.
+All application entry points require the `ani-watch` Conda environment to be active.
 
 ## Run tests
 
