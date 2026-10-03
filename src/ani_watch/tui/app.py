@@ -4,6 +4,8 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Label, Static
 
+from ani_watch.tui.screens.search import SearchScreen
+
 from ani_watch import __version__
 
 
@@ -80,6 +82,7 @@ class AniWatchApp(App[None]):
         ("q", "quit", "Quit"),
         ("?", "help", "Help"),
         ("h", "show_home", "Home"),
+        ("/", "show_search", "Search"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -130,11 +133,15 @@ class AniWatchApp(App[None]):
         if action == "quit":
             self.exit()
         elif action == "search":
-            self.notify("Search screen is planned for the next TUI issue.")
+            self.push_screen(SearchScreen())
         elif action == "library":
             self.notify("Library screen will be connected in a later issue.")
         elif action == "settings":
             self.notify("Settings screen will be connected in a later issue.")
+
+    def action_show_search(self) -> None:
+        """Open the anime search screen."""
+        self.push_screen(SearchScreen())
 
     def action_show_home(self) -> None:
         """Return to the home dashboard."""
