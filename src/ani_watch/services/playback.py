@@ -1,8 +1,6 @@
 """Playback intelligence orchestration."""
 
-from __future__ import annotations
-
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from ani_watch.config.settings import PlaybackSettings
 from ani_watch.domain.errors import PlaybackError
@@ -45,6 +43,12 @@ class PlaybackManager:
         else:
             self.player.play()
 
+    def set_audio_track(self, track_id: int) -> None:
+        self.player.select_audio_track(track_id)
+
+    def set_subtitle_track(self, track_id: int) -> None:
+        self.player.select_subtitle_track(track_id)
+
     def skip_intro(self, current_seconds: int, hooks: PlaybackHooks) -> None:
         if not self.settings.skip_intro or hooks.intro_end is None:
             return
@@ -58,6 +62,23 @@ class PlaybackManager:
         target = hooks.outro_start(current_seconds)
         if target is not None:
             self.seek(target)
+
+    def next_episode_index(self, current_index: int, total: int) -> int | None:
+        """Return the next episode index when auto-next is enabled."""
+        if not self.settings.auto_next:
+            return None
+        candidate = current_index + 1
+        return candidate if 0 <= candidate < total else None
+
+    def choose_local_first(
+        self,
+        local_uri: str | None,
+        remote_uri: str | None,
+    ) -> str | None:
+        """Choose a local file before a provider URI when configured."""
+        if self.settings.local_first and local_uri:
+            return local_uri
+        return remote_uri or local_uri
 
     def can_auto_next(self) -> bool:
         return self.settings.auto_next
