@@ -8,7 +8,7 @@ from ani_watch import __version__
 from ani_watch.config.settings import AppSettings
 from ani_watch.config.store import SettingsStore
 from ani_watch.metadata.anilist import AniListClient
-from ani_watch.metadata.cache import MemoryCache
+from ani_watch.metadata.cache import MemoryCache, RedisCache
 from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
@@ -79,9 +79,19 @@ class AniWatchApp(App[None]):
                 timeout=self.settings.network.timeout_seconds,
                 retries=self.settings.network.retries,
             ),
-            cache=MemoryCache(),
+            cache=self._build_metadata_cache(),
             offline=self.settings.network.offline_mode,
         )
+
+    def _build_metadata_cache(self) -> MemoryCache | RedisCache:
+        """Build the configured metadata cache with a safe local fallback."""
+        if not self.settings.redis_url:
+            return MemoryCache()
+
+        try:
+            return RedisCache(self.settings.redis_url)
+        except (ImportError, TypeError, ValueError):
+            return MemoryCache()
 
     async def on_unmount(self) -> None:
         """Release resources owned by the application shell."""
