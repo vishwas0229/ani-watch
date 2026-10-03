@@ -29,6 +29,7 @@ class VlcPlayer:
                 "libVLC could not be initialized. Ensure VLC is installed on the system."
             ) from exc
         self._end_callback: Callable[[], None] | None = None
+        self.quality = "1080p"
 
     def load(self, uri: str, *, options: tuple[str, ...] = ()) -> None:
         """Load a local path or URI."""
@@ -89,14 +90,10 @@ class VlcPlayer:
             raise PlaybackError(f"Unable to select subtitle track {track_id}.")
 
     def set_quality(self, quality: str) -> None:
-        """Apply a quality hint when supported by the media source."""
+        """Store the requested quality for provider/source adapters."""
         clean = quality.strip()
-        if not clean:
-            return
-        media = self.player.get_media()
-        if media is not None:
-            media.add_option(f":network-caching=1000")
-            media.add_option(f":meta-title={clean}")
+        if clean:
+            self.quality = clean
 
     def on_complete(self, callback: Callable[[], None]) -> None:
         """Register a completion callback."""
