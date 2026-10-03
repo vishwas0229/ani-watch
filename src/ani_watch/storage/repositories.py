@@ -5,7 +5,11 @@ from datetime import UTC, datetime
 
 from sqlalchemy import delete, desc, select
 
-from ani_watch.domain.models import AnimeDetails, WatchHistoryEntry
+from ani_watch.domain.models import (
+    AnimeDetails,
+    ContinueWatchingItem,
+    WatchHistoryEntry,
+)
 from ani_watch.storage.database import Database
 from ani_watch.storage.models import (
     AnimeRecord,
@@ -152,6 +156,38 @@ class HistoryRepository:
                 ).all()
             )
 
+    def list_recent_entries(self, limit: int = 50) -> list[WatchHistoryEntry]:
+        """Return history rows projected into the provider-neutral domain model."""
+        with self.db.session() as session:
+            rows = session.execute(
+                select(
+                    HistoryRecord,
+                    AnimeRecord.title,
+                    EpisodeRecord.title,
+                )
+                .outerjoin(AnimeRecord, AnimeRecord.id == HistoryRecord.anime_id)
+                .outerjoin(
+                    EpisodeRecord,
+                    (EpisodeRecord.anime_id == HistoryRecord.anime_id)
+                    & (EpisodeRecord.number == HistoryRecord.episode_number),
+                )
+                .order_by(desc(HistoryRecord.watched_at), desc(HistoryRecord.id))
+                .limit(max(1, limit))
+            ).all()
+
+        return [
+            WatchHistoryEntry(
+                anime_id=record.anime_id,
+                anime_title=anime_title or "Unknown anime",
+                episode_number=record.episode_number,
+                episode_title=episode_title,
+                watched_at=record.watched_at,
+                progress_seconds=record.progress_seconds,
+                duration_seconds=record.duration_seconds,
+            )
+            for record, anime_title, episode_title in rows
+        ]
+
 
 class ProgressRepository:
     """Persist playback position and completion state."""
@@ -199,6 +235,31 @@ class ProgressRepository:
                     ProgressRecord.episode_number == episode_number,
                 )
             ).scalar_one_or_none()
+
+    def list_continue_watching(self, limit: int = 20) -> list[ContinueWatchingItem]:
+        """Return incomplete progress rows with anime titles in one projection query."""
+        with self.db.session() as session:
+            rows = session.execute(
+                select(
+                    ProgressRecord,
+                    AnimeRecord.title,
+                )
+                .outerjoin(AnimeRecord, AnimeRecord.id == ProgressRecord.anime_id)
+                .where(ProgressRecord.completed.is_(False))
+                .order_by(desc(ProgressRecord.updated_at))
+                .limit(max(1, limit))
+            ).all()
+
+        return [
+            ContinueWatchingItem(
+                anime_id=record.anime_id,
+                anime_title=anime_title or "Unknown anime",
+                episode_number=record.episode_number,
+                position_seconds=record.position_seconds,
+                duration_seconds=record.duration_seconds,
+            )
+            for record, anime_title in rows
+        ]
 
 
 class SettingsRepository:
