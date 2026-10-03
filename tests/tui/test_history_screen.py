@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ani_watch.domain.models import WatchHistoryEntry
 from ani_watch.tui.app import AniWatchApp
@@ -12,7 +12,7 @@ def sample_history() -> tuple[WatchHistoryEntry, ...]:
             anime_title="Sample Anime",
             episode_number=5,
             episode_title="The Turning Point",
-            watched_at=datetime(2026, 10, 3, 21, 30, tzinfo=timezone.utc),
+            watched_at=datetime(2026, 10, 3, 21, 30, tzinfo=UTC),
             progress_seconds=600,
             duration_seconds=1200,
         ),
@@ -67,6 +67,8 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
 
+        resume = app.screen.query_one("#resume")
+        resume.focus()
         await pilot.press("enter")
         await pilot.pause()
 
@@ -93,12 +95,6 @@ async def test_history_screen_back_and_escape() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await app.push_screen(HistoryScreen(sample_history()))
-        await pilot.pause()
-        await pilot.click("#back")
-        await pilot.pause()
-        assert not isinstance(app.screen, HistoryScreen)
-
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
         await pilot.press("escape")

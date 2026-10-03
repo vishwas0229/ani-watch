@@ -230,7 +230,7 @@ class EpisodeScreen(Screen[None]):
         """Focus the selected episode button when it is available."""
         if not self.episodes:
             return
-        button = self.query_one(self._episode_id(self._selected_index), Button)
+        button = self.query_one(f"#{self._episode_id(self._selected_index)}", Button)
         if not button.disabled:
             button.focus()
 

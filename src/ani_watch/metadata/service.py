@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ani_watch.domain.models import AnimeDetails
-from ani_watch.domain.models import AnimeRef
+from ani_watch.domain.models import AnimeDetails, AnimeRef
 from ani_watch.metadata.anilist import AniListClient
 
 

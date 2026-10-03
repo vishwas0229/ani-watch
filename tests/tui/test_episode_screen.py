@@ -116,7 +116,9 @@ async def test_episode_screen_back_button_returns_home() -> None:
         await app.push_screen(EpisodeScreen("Sample Anime", sample_episodes()))
         await pilot.pause()
 
-        await pilot.click("#back")
+        back = app.screen.query_one("#back", Button)
+        back.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert not isinstance(app.screen, EpisodeScreen)

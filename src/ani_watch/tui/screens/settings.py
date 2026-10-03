@@ -81,7 +81,11 @@ class SettingsScreen(Screen[None]):
             with Horizontal(classes="setting-row"):
                 yield Label("Theme", classes="setting-label")
                 yield Select(
-                    [("Midnight", "midnight"), ("Mono", "mono"), ("High Contrast", "high-contrast")],
+                    [
+                        ("Midnight", "midnight"),
+                        ("Mono", "mono"),
+                        ("High Contrast", "high-contrast"),
+                    ],
                     value=self.settings.ui.theme,
                     id="theme",
                     classes="setting-control",

@@ -198,7 +198,7 @@ class FavoritesScreen(Screen[None]):
     def _focus_selected(self) -> None:
         """Focus the currently selected favorite."""
         if self.favorites:
-            self.query_one(self._favorite_id(self._selected_index), Button).focus()
+            self.query_one(f"#{self._favorite_id(self._selected_index)}", Button).focus()
 
     def _move_selection(self, step: int) -> None:
         """Move selection while keeping it inside the list."""
@@ -231,19 +231,24 @@ class FavoritesScreen(Screen[None]):
         )
 
         favorites_list = self.query_one("#favorites-list", VerticalScroll)
-        favorites_list.remove_children()
+        existing_buttons = list(favorites_list.query("Button.favorite-item"))
+
+        for index, button in enumerate(existing_buttons):
+            if index < len(self.favorites):
+                favorite = self.favorites[index]
+                button.label = self._favorite_label(favorite)
+                button.display = True
+                if index == self._selected_index:
+                    button.add_class("selected")
+                else:
+                    button.remove_class("selected")
+            else:
+                button.display = False
+                button.remove_class("selected")
 
         if self.favorites:
-            for index, favorite in enumerate(self.favorites):
-                favorites_list.mount(
-                    Button(
-                        self._favorite_label(favorite),
-                        id=self._favorite_id(index),
-                        classes=self._favorite_classes(index),
-                    )
-                )
             self._focus_selected()
-        else:
+        elif not self.query("#favorites-empty"):
             favorites_list.mount(
                 Static(
                     "No favorites yet. Add an anime from its details screen "
