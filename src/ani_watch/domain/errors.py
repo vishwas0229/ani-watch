@@ -1,5 +1,6 @@
 """Application-level exception hierarchy."""
 
+
 class AniWatchError(Exception):
     """Base exception for expected Ani-Watch failures."""
 
@@ -22,3 +23,15 @@ class ProviderError(AniWatchError):
 
 class StorageError(AniWatchError):
     """Persistent storage could not fulfill a request."""
+
+
+class AuthenticationError(AniWatchError):
+    """AniList authentication failed."""
+
+
+class RateLimitError(MetadataError):
+    """An upstream service requested slower retries."""
+
+
+class OfflineError(AniWatchError):
+    """An operation requires unavailable network access."""
