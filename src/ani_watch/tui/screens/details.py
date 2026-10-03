@@ -17,7 +17,9 @@ class AnimeDetailsScreen(Screen[None]):
     #details-page {
         width: 92%;
         max-width: 120;
-        height: 100%;
+        height: 1fr;
+        min-height: 0;
+        overflow-y: auto;
         padding: 1 2;
         margin: 0 2;
     }
