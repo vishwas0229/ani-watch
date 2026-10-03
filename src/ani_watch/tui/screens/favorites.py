@@ -146,7 +146,10 @@ class FavoritesScreen(Screen[None]):
     def _initial_status(self) -> str:
         """Return the empty or ready state message."""
         if not self.favorites:
-            return "Favorites persistence will be connected in the library/storage phase."
+            return (
+                "Favorites persistence will be connected in the "
+                "library/storage phase."
+            )
         return "Select an anime and press Enter to open its details."
 
     @staticmethod
@@ -225,26 +228,26 @@ class FavoritesScreen(Screen[None]):
             0, min(self._selected_index, len(self.favorites) - 1)
         )
 
-        self.query_one("#favorites-list").remove_children()
+        favorites_list = self.query_one("#favorites-list", VerticalScroll)
+        favorites_list.remove_children()
+
         if self.favorites:
             for index, favorite in enumerate(self.favorites):
-                self.mount(
+                favorites_list.mount(
                     Button(
                         self._favorite_label(favorite),
                         id=self._favorite_id(index),
                         classes=self._favorite_classes(index),
-                    ),
-                    before=self.query_one("#favorites-status"),
+                    )
                 )
             self._focus_selected()
         else:
-            self.mount(
+            favorites_list.mount(
                 Static(
                     "No favorites yet. Add an anime from its details screen "
                     "to build your library.",
                     id="favorites-empty",
-                ),
-                before=self.query_one("#favorites-status"),
+                )
             )
 
         self._refresh_action_state()
