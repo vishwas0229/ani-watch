@@ -148,10 +148,7 @@ class FavoritesScreen(Screen[None]):
     def _initial_status(self) -> str:
         """Return the empty or ready state message."""
         if not self.favorites:
-            return (
-                "Favorites persistence will be connected in the "
-                "library/storage phase."
-            )
+            return "Favorites persistence will be connected in the library/storage phase."
         return "Select an anime and press Enter, o, or Open Details to view it."
 
     @staticmethod
@@ -191,9 +188,7 @@ class FavoritesScreen(Screen[None]):
         button.focus()
 
         favorite = self.favorites[index]
-        self.query_one("#favorites-status", Static).update(
-            f"Selected {favorite.title}."
-        )
+        self.query_one("#favorites-status", Static).update(f"Selected {favorite.title}.")
 
     def _focus_selected(self) -> None:
         """Focus the currently selected favorite."""
@@ -204,9 +199,7 @@ class FavoritesScreen(Screen[None]):
         """Move selection while keeping it inside the list."""
         if not self.favorites:
             return
-        candidate = max(
-            0, min(self._selected_index + step, len(self.favorites) - 1)
-        )
+        candidate = max(0, min(self._selected_index + step, len(self.favorites) - 1))
         self._select_index(candidate)
 
     def next_favorite(self) -> None:
@@ -220,15 +213,11 @@ class FavoritesScreen(Screen[None]):
     def remove_selected(self) -> None:
         """Remove the selected favorite from this screen's local collection."""
         if not self.favorites:
-            self.query_one("#favorites-status", Static).update(
-                "There is no favorite to remove."
-            )
+            self.query_one("#favorites-status", Static).update("There is no favorite to remove.")
             return
 
         removed = self.favorites.pop(self._selected_index)
-        self._selected_index = max(
-            0, min(self._selected_index, len(self.favorites) - 1)
-        )
+        self._selected_index = max(0, min(self._selected_index, len(self.favorites) - 1))
 
         favorites_list = self.query_one("#favorites-list", VerticalScroll)
         existing_buttons = list(favorites_list.query("Button.favorite-item"))
@@ -251,8 +240,7 @@ class FavoritesScreen(Screen[None]):
         elif not self.query("#favorites-empty"):
             favorites_list.mount(
                 Static(
-                    "No favorites yet. Add an anime from its details screen "
-                    "to build your library.",
+                    "No favorites yet. Add an anime from its details screen to build your library.",
                     id="favorites-empty",
                 )
             )
@@ -272,9 +260,7 @@ class FavoritesScreen(Screen[None]):
     def open_details(self) -> None:
         """Open the selected favorite in the existing details screen."""
         if not self.favorites:
-            self.query_one("#favorites-status", Static).update(
-                "Select a favorite first."
-            )
+            self.query_one("#favorites-status", Static).update("Select a favorite first.")
             return
 
         favorite = self.favorites[self._selected_index]

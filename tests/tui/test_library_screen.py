@@ -11,12 +11,8 @@ from ani_watch.tui.screens.library import LibraryScreen
 
 async def test_library_screen_renders_tracking_sections() -> None:
     snapshot = LibrarySnapshot(
-        continue_watching=(
-            ContinueWatchingItem(1, "Sample Anime", 6, 300, 1200),
-        ),
-        recently_watched=(
-            RecentlyWatchedItem(1, "Sample Anime", 5),
-        ),
+        continue_watching=(ContinueWatchingItem(1, "Sample Anime", 6, 300, 1200),),
+        recently_watched=(RecentlyWatchedItem(1, "Sample Anime", 5),),
         watched_episodes=5,
         favorites=2,
     )

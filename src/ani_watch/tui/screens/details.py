@@ -219,11 +219,7 @@ class AnimeDetailsScreen(Screen[None]):
     @staticmethod
     def _season(season: str | None, year: int | None) -> str:
         """Format season and year when available."""
-        parts = [
-            part
-            for part in (season, str(year) if year is not None else None)
-            if part
-        ]
+        parts = [part for part in (season, str(year) if year is not None else None) if part]
         return " ".join(parts) if parts else "Not available"
 
     @staticmethod
@@ -243,16 +239,13 @@ class AnimeDetailsScreen(Screen[None]):
         if action == "back":
             self.app.pop_screen()
         elif action == "episodes":
-            self.notify(
-                "Episode selection will be connected in the Episode screen issue."
-            )
+            self.notify("Episode selection will be connected in the Episode screen issue.")
         elif action == "favorite":
             self.toggle_favorite()
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
         self.app.pop_screen()
-
 
     def toggle_favorite(self) -> None:
         """Toggle the selected anime's local favorite state."""

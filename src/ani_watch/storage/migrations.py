@@ -25,13 +25,7 @@ def upgrade(engine) -> None:
 
         if current is None:
             Base.metadata.create_all(engine)
-            connection.execute(
-                sa.insert(version_table).values(version=MIGRATION_VERSION)
-            )
+            connection.execute(sa.insert(version_table).values(version=MIGRATION_VERSION))
         elif current < MIGRATION_VERSION:
             Base.metadata.create_all(engine)
-            connection.execute(
-                version_table.update().values(
-                    version=MIGRATION_VERSION
-                )
-            )
+            connection.execute(version_table.update().values(version=MIGRATION_VERSION))

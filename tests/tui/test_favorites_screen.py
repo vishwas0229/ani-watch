@@ -30,9 +30,7 @@ async def test_favorites_screen_renders_saved_anime() -> None:
         await app.push_screen(FavoritesScreen(sample_favorites()))
         await pilot.pause()
 
-        assert app.screen.query_one("#favorites-summary").content == (
-            "2 favorites"
-        )
+        assert app.screen.query_one("#favorites-summary").content == ("2 favorites")
         assert "Sample Anime • FINISHED • 24 eps • 91.4/100" in str(
             app.screen.query_one("#favorite-0").label
         )
@@ -50,9 +48,7 @@ async def test_favorites_selection_updates_status() -> None:
         await pilot.pause()
 
         assert app.screen.query_one("#favorite-1").has_class("selected")
-        assert "Selected Another Anime" in str(
-            app.screen.query_one("#favorites-status").content
-        )
+        assert "Selected Another Anime" in str(app.screen.query_one("#favorites-status").content)
 
 
 async def test_remove_favorite_updates_list_and_empty_state() -> None:

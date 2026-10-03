@@ -119,19 +119,11 @@ class FavoriteRepository:
 
     def remove(self, anime_id: int) -> None:
         with self.db.session() as session:
-            session.execute(
-                delete(FavoriteRecord).where(
-                    FavoriteRecord.anime_id == anime_id
-                )
-            )
+            session.execute(delete(FavoriteRecord).where(FavoriteRecord.anime_id == anime_id))
 
     def list(self) -> list[int]:
         with self.db.session() as session:
-            return list(
-                session.scalars(
-                    select(FavoriteRecord.anime_id)
-                ).all()
-            )
+            return list(session.scalars(select(FavoriteRecord.anime_id)).all())
 
 
 class HistoryRepository:
@@ -156,9 +148,7 @@ class HistoryRepository:
         with self.db.session() as session:
             return list(
                 session.scalars(
-                    select(HistoryRecord)
-                    .order_by(desc(HistoryRecord.watched_at))
-                    .limit(limit)
+                    select(HistoryRecord).order_by(desc(HistoryRecord.watched_at)).limit(limit)
                 ).all()
             )
 

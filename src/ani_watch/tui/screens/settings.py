@@ -158,9 +158,7 @@ class SettingsScreen(Screen[None]):
         apply_theme = getattr(self.app, "apply_theme", None)
         if callable(apply_theme):
             apply_theme(self.settings.ui.theme)
-        self.query_one("#settings-status", Static).update(
-            "Settings saved successfully."
-        )
+        self.query_one("#settings-status", Static).update("Settings saved successfully.")
 
     def reset_settings(self) -> None:
         """Reset controls to typed defaults without network access."""

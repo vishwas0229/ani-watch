@@ -173,6 +173,5 @@ class AniWatchApp(App[None]):
     def action_help(self) -> None:
         """Show the current keyboard shortcuts."""
         self.notify(
-            "Tab: navigate • / Search • r History • f Favorites • "
-            "l Library • s Settings • q Quit"
+            "Tab: navigate • / Search • r History • f Favorites • l Library • s Settings • q Quit"
         )

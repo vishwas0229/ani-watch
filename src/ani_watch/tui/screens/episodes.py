@@ -180,11 +180,7 @@ class EpisodeScreen(Screen[None]):
     def _episode_label(episode: EpisodeItem) -> str:
         """Format the visible episode row."""
         title = episode.title.strip() if episode.title else f"Episode {episode.number}"
-        duration = (
-            f" • {episode.duration_minutes}m"
-            if episode.duration_minutes is not None
-            else ""
-        )
+        duration = f" • {episode.duration_minutes}m" if episode.duration_minutes is not None else ""
         state = " • Watched" if episode.watched else ""
         if not episode.available:
             state = " • Unavailable"
@@ -217,8 +213,7 @@ class EpisodeScreen(Screen[None]):
         state = "watched" if episode.watched else "unwatched"
         availability = "unavailable" if not episode.available else state
         self.query_one("#episode-status", Static).update(
-            f"Selected Episode {episode.number}: {episode.title or 'Untitled'} "
-            f"({availability})."
+            f"Selected Episode {episode.number}: {episode.title or 'Untitled'} ({availability})."
         )
 
     def _clear_selection_classes(self) -> None:
@@ -264,9 +259,7 @@ class EpisodeScreen(Screen[None]):
     def play_selected(self) -> None:
         """Prepare playback handoff without coupling to the player layer."""
         if not self.episodes:
-            self.query_one("#episode-status", Static).update(
-                "No episode is available to play yet."
-            )
+            self.query_one("#episode-status", Static).update("No episode is available to play yet.")
             return
 
         episode = self.episodes[self._selected_index]
