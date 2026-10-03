@@ -2,3 +2,4 @@
 
 Services coordinate domain behavior without embedding provider, database, or
 player implementation details.
+"""
