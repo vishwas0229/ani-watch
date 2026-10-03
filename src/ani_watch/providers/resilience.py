@@ -6,8 +6,9 @@ import time
 from dataclasses import dataclass
 
 from ani_watch.domain.errors import ProviderError
-from ani_watch.providers.contracts import MediaCandidate, Provider
 from ani_watch.domain.models import AnimeRef, EpisodeRef
+from ani_watch.providers.contracts import MediaCandidate
+from ani_watch.providers.registry import ProviderRegistry
 
 
 @dataclass
@@ -19,7 +20,11 @@ class CircuitState:
 class CircuitBreaker:
     """Open a circuit after repeated provider failures."""
 
-    def __init__(self, failure_threshold: int = 3, recovery_seconds: float = 60.0) -> None:
+    def __init__(
+        self,
+        failure_threshold: int = 3,
+        recovery_seconds: float = 60.0,
+    ) -> None:
         self.failure_threshold = max(1, failure_threshold)
         self.recovery_seconds = max(1.0, recovery_seconds)
         self._states: dict[str, CircuitState] = {}
@@ -51,13 +56,22 @@ class ProviderHealth:
         self._stats: dict[str, dict[str, int]] = {}
 
     def success(self, provider: str) -> None:
-        self._stats.setdefault(provider, {"successes": 0, "failures": 0})["successes"] += 1
+        self._stats.setdefault(
+            provider,
+            {"successes": 0, "failures": 0},
+        )["successes"] += 1
 
     def failure(self, provider: str) -> None:
-        self._stats.setdefault(provider, {"successes": 0, "failures": 0})["failures"] += 1
+        self._stats.setdefault(
+            provider,
+            {"successes": 0, "failures": 0},
+        )["failures"] += 1
 
     def snapshot(self) -> dict[str, dict[str, int]]:
-        return {name: values.copy() for name, values in self._stats.items()}
+        return {
+            name: values.copy()
+            for name, values in self._stats.items()
+        }
 
 
 class ProviderResolver:
@@ -88,7 +102,11 @@ class ProviderResolver:
             try:
                 if not await provider.available(anime, episode):
                     continue
-                candidate = await provider.resolve(anime, episode, quality=quality)
+                candidate = await provider.resolve(
+                    anime,
+                    episode,
+                    quality=quality,
+                )
                 if candidate is None:
                     continue
                 self.health.success(provider.name)
@@ -98,6 +116,7 @@ class ProviderResolver:
                 last_error = exc
                 self.health.failure(provider.name)
                 self.breaker.failure(provider.name)
+
         message = "No configured provider could resolve the episode."
         if last_error:
             message += f" Last error: {last_error}"
