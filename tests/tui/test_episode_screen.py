@@ -54,7 +54,9 @@ async def test_episode_selection_updates_status() -> None:
         await app.push_screen(EpisodeScreen("Sample Anime", sample_episodes()))
         await pilot.pause()
 
-        await pilot.click("#episode-1")
+        episode = app.query_one("#episode-1", Button)
+        episode.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert "Selected Episode 2: The Journey" in str(
@@ -116,7 +118,9 @@ async def test_episode_screen_back_button_returns_home() -> None:
         await app.push_screen(EpisodeScreen("Sample Anime", sample_episodes()))
         await pilot.pause()
 
-        await pilot.click("#back")
+        back = app.query_one("#back", Button)
+        back.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert not isinstance(app.screen, EpisodeScreen)
