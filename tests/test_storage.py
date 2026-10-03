@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from ani_watch.domain.details import AnimeDetails
-from ani_watch.domain.history import WatchHistoryEntry
+from ani_watch.domain.models import AnimeDetails, WatchHistoryEntry
 from ani_watch.storage.database import Database
 from ani_watch.storage.repositories import (
     AnimeRepository,
