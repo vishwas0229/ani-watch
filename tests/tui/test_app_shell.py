@@ -1,5 +1,7 @@
 from textual.widgets import Button, Label, Static
 
+from ani_watch.config.settings import AppSettings
+from ani_watch.metadata.cache import RedisCache
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
@@ -15,6 +17,12 @@ def test_app_shell_metadata() -> None:
 def test_app_can_be_constructed() -> None:
     app = AniWatchApp()
     assert app.title == "Ani-Watch"
+
+
+def test_app_uses_redis_cache_when_configured() -> None:
+    app = AniWatchApp(settings=AppSettings(redis_url="redis://localhost:6379/0"))
+
+    assert isinstance(app.metadata_service.cache, RedisCache)
 
 
 async def test_home_screen_renders_primary_sections() -> None:
