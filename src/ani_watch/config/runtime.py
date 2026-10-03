@@ -16,6 +16,7 @@ def require_conda_environment() -> None:
 
     raise CondaEnvironmentError(
         "Ani-Watch requires an active Conda environment. "
-        "Create or activate one first, for example: "
-        "'conda activate ani-watch' or 'conda activate dev'."
+        "Create the project environment first with: "
+        "'conda env create -f environment.yml' and "
+        "'conda activate ani-watch'."
     )
