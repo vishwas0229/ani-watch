@@ -81,8 +81,9 @@ class SettingsScreen(Screen[None]):
                     options=[
                         ("Textual Dark", "textual-dark"),
                         ("Textual Light", "textual-light"),
-                        ("Solarized Dark", "solarized-dark"),
-                        ("Monokai", "monokai"),
+                        ("Solarized", "solarized"),
+                        ("Textual Dark", "textual-dark"),
+                        ("Textual Light", "textual-light"),
                     ],
                     value=self.settings.ui.theme,
                     id="theme",
