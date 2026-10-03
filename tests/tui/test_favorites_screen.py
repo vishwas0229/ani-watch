@@ -62,9 +62,7 @@ async def test_remove_favorite_updates_list_and_empty_state() -> None:
         await app.push_screen(FavoritesScreen(sample_favorites()))
         await pilot.pause()
 
-        remove = app.screen.query_one("#remove")
-        remove.focus()
-        await pilot.press("enter")
+        await pilot.press("delete")
         await pilot.pause()
 
         assert len(app.screen.favorites) == 1
