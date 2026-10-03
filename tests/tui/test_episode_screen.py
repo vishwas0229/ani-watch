@@ -33,8 +33,8 @@ async def test_episode_screen_renders_episode_list() -> None:
         )
         await pilot.pause()
 
-        assert app.screen.query_one("#anime-title").renderable == "Sample Anime"
-        assert app.screen.query_one("#episode-summary").renderable == (
+        assert app.screen.query_one("#anime-title").content == "Sample Anime"
+        assert app.screen.query_one("#episode-summary").content == (
             "3 episodes • 1 watched"
         )
         assert "01 • The Beginning • 24m • Watched" in str(
@@ -58,7 +58,7 @@ async def test_episode_selection_updates_status() -> None:
         await pilot.pause()
 
         assert "Selected Episode 2: The Journey" in str(
-            app.screen.query_one("#episode-status").renderable
+            app.screen.query_one("#episode-status").content
         )
         assert app.screen.query_one("#episode-1").has_class("selected")
         assert not app.screen.query_one("#episode-0").has_class("selected")
@@ -91,7 +91,7 @@ async def test_play_action_uses_provider_neutral_handoff() -> None:
         await pilot.pause()
 
         assert "Playback requested for Episode 1" in str(
-            app.screen.query_one("#episode-status").renderable
+            app.screen.query_one("#episode-status").content
         )
 
 
@@ -105,7 +105,7 @@ async def test_empty_episode_screen_disables_play() -> None:
         assert app.screen.query_one("#episodes-empty")
         assert app.screen.query_one("#play").disabled
         assert "0 episodes" in str(
-            app.screen.query_one("#episode-summary").renderable
+            app.screen.query_one("#episode-summary").content
         )
 
 
