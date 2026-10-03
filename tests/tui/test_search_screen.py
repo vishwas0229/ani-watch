@@ -1,5 +1,3 @@
-import pytest
-
 from ani_watch.domain.models import AnimeDetails, AnimeRef
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.details import AnimeDetailsScreen
@@ -7,13 +5,16 @@ from ani_watch.tui.screens.search import SearchScreen
 
 
 class FakeMetadataService:
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self) -> None:
+        self.search_calls = 0
+        self.details_calls = 0
 
     async def search(self, query: str):
+        self.search_calls += 1
         return [AnimeRef(anilist_id=1, title=query.title())]
 
     async def details(self, anime_id: int):
+        self.details_calls += 1
         return AnimeDetails(
             anilist_id=anime_id,
             title="Sample Anime",
@@ -21,14 +22,6 @@ class FakeMetadataService:
             episodes=12,
             score=88.0,
         )
-
-
-@pytest.fixture
-def fake_service(monkeypatch):
-    monkeypatch.setattr(
-        "ani_watch.tui.screens.search.AnimeMetadataService",
-        FakeMetadataService,
-    )
 
 
 async def test_home_search_button_opens_search_screen() -> None:
@@ -55,8 +48,9 @@ async def test_search_screen_validates_empty_query() -> None:
         assert "Enter an anime title" in str(status.content)
 
 
-async def test_search_screen_renders_provider_results(fake_service) -> None:
-    app = AniWatchApp()
+async def test_search_screen_renders_provider_results() -> None:
+    service = FakeMetadataService()
+    app = AniWatchApp(metadata_service=service)
 
     async with app.run_test() as pilot:
         await app.push_screen(SearchScreen())
@@ -69,10 +63,12 @@ async def test_search_screen_renders_provider_results(fake_service) -> None:
 
         assert app.screen.query_one("#result-0").label == "Frieren"
         assert "Found 1 anime" in str(app.screen.query_one("#search-status").content)
+        assert service.search_calls == 1
 
 
-async def test_search_result_opens_details(fake_service) -> None:
-    app = AniWatchApp()
+async def test_search_result_opens_details() -> None:
+    service = FakeMetadataService()
+    app = AniWatchApp(metadata_service=service)
 
     async with app.run_test() as pilot:
         await app.push_screen(SearchScreen())
@@ -88,6 +84,17 @@ async def test_search_result_opens_details(fake_service) -> None:
 
         assert isinstance(app.screen, AnimeDetailsScreen)
         assert app.screen.query_one("#details-title").content == "Sample Anime"
+        assert service.details_calls == 1
+
+
+async def test_app_and_direct_search_share_the_same_metadata_service() -> None:
+    service = FakeMetadataService()
+    app = AniWatchApp(metadata_service=service)
+
+    async with app.run_test() as pilot:
+        await app.push_screen(SearchScreen())
+        assert app.screen.service is service
+        await pilot.pause()
 
 
 async def test_search_screen_back_button_returns_home() -> None:

@@ -7,15 +7,14 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, Static
 
-from ani_watch.domain.errors import AniWatchError
+from ani_watch.domain.errors import AniWatchError, OfflineError
 from ani_watch.domain.models import AnimeRef
-from ani_watch.metadata.anilist import AniListClient
-from ani_watch.metadata.service import AnimeMetadataService
+from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 
 
 class SearchScreen(Screen[None]):
-    """Search AniList and open an anime's details."""
+    """Search cached/provider metadata and open an anime's details."""
 
     CSS = """
     #search-page {
@@ -42,9 +41,22 @@ class SearchScreen(Screen[None]):
         ("/", "focus_search", "Search"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        metadata_service: CachedMetadataService | None = None,
+    ) -> None:
         super().__init__()
+        self.metadata_service = metadata_service
         self._refs: dict[str, AnimeRef] = {}
+
+    @property
+    def service(self) -> CachedMetadataService:
+        """Resolve the shared app service, with a direct-injection fallback."""
+        service = self.metadata_service or getattr(self.app, "metadata_service", None)
+        if service is None:
+            raise RuntimeError("SearchScreen requires an application metadata service.")
+        return service
 
     def compose(self) -> ComposeResult:
         with Vertical(id="search-page"):
@@ -82,19 +94,18 @@ class SearchScreen(Screen[None]):
         self.run_worker(self._perform_search(query), exclusive=True)
 
     async def _perform_search(self, query: str) -> None:
-        service = AnimeMetadataService(AniListClient())
+        status = self.query_one("#search-status", Static)
         try:
-            refs = await service.search(query)
+            refs = await self.service.search(query)
+        except OfflineError as exc:
+            status.update(f"Offline: {exc}")
+            return
         except AniWatchError as exc:
-            self.query_one("#search-status", Static).update(str(exc))
+            status.update(str(exc))
             return
         except Exception:
-            self.query_one("#search-status", Static).update(
-                "Search failed. Check your network connection and try again."
-            )
+            status.update("Search failed. Check your network connection and try again.")
             return
-        finally:
-            await service.client.close()
 
         self._refs.clear()
         results = self.query_one("#search-results", VerticalScroll)
@@ -102,7 +113,7 @@ class SearchScreen(Screen[None]):
 
         if not refs:
             results.mount(Static("No anime found.", id="search-empty"))
-            self.query_one("#search-status", Static).update("No results found.")
+            status.update("No results found.")
             return
 
         for index, ref in enumerate(refs):
@@ -115,9 +126,7 @@ class SearchScreen(Screen[None]):
                     classes="search-result",
                 )
             )
-        self.query_one("#search-status", Static).update(
-            f"Found {len(refs)} anime. Select one to open details."
-        )
+        status.update(f"Found {len(refs)} anime. Select one to open details.")
 
     def open_details(self, ref: AnimeRef) -> None:
         self.run_worker(self._load_details(ref), exclusive=True)
@@ -125,18 +134,17 @@ class SearchScreen(Screen[None]):
     async def _load_details(self, ref: AnimeRef) -> None:
         status = self.query_one("#search-status", Static)
         status.update(f"Loading details for {ref.title}…")
-        client = AniListClient()
-        service = AnimeMetadataService(client)
         try:
-            anime = await service.details(ref.anilist_id)
+            anime = await self.service.details(ref.anilist_id)
+        except OfflineError as exc:
+            status.update(f"Offline: {exc}")
+            return
         except AniWatchError as exc:
             status.update(str(exc))
             return
         except Exception:
             status.update("Unable to load anime details.")
             return
-        finally:
-            await client.close()
         self.app.push_screen(AnimeDetailsScreen(anime))
 
     def action_focus_search(self) -> None:
