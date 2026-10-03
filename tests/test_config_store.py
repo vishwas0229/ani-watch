@@ -39,7 +39,10 @@ def test_invalid_values_are_rejected() -> None:
 
 def test_invalid_persisted_config_raises_controlled_error(tmp_path: Path) -> None:
     path = tmp_path / "config.toml"
-    path.write_text("[ui]\ntheme = \"dracula\"\n", encoding="utf-8")
+    path.write_text(
+        '[ui]\ntheme = "dracula"\n',
+        encoding="utf-8",
+    )
 
     with pytest.raises(ConfigurationError, match="Invalid Ani-Watch configuration"):
         SettingsStore(path).load()
