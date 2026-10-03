@@ -4,6 +4,7 @@ import typer
 
 from ani_watch.config.runtime import CondaEnvironmentError, require_conda_environment
 from ani_watch.config.settings import AppSettings
+from ani_watch.domain.errors import ConfigurationError
 from ani_watch.storage.database import Database
 from ani_watch.storage.migrations import upgrade
 
@@ -48,4 +49,8 @@ def root(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
         from ani_watch.tui.app import AniWatchApp
 
-        AniWatchApp().run()
+        try:
+            AniWatchApp().run()
+        except ConfigurationError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(code=2) from exc
