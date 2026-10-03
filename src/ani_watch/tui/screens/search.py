@@ -104,9 +104,7 @@ class SearchScreen(Screen[None]):
             status.update(str(exc))
             return
         except Exception:
-            status.update(
-                "Search failed. Check your network connection and try again."
-            )
+            status.update("Search failed. Check your network connection and try again.")
             return
 
         self._refs.clear()

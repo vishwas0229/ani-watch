@@ -35,9 +35,7 @@ class CachedMetadataService:
             return [AnimeRef(**item) for item in cached]
 
         if self.offline:
-            raise OfflineError(
-                "Offline mode is enabled and this search is not cached locally."
-            )
+            raise OfflineError("Offline mode is enabled and this search is not cached locally.")
 
         results = await self.client.search(query, limit=limit)
         refs = [
