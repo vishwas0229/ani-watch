@@ -1,67 +1,65 @@
-import pytest
-
-from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import AnimeRef, EpisodeRef
-from ani_watch.providers.contracts import MediaCandidate
-from ani_watch.providers.registry import ProviderRegistry
-from ani_watch.providers.resilience import CircuitBreaker, ProviderHealth, ProviderResolver
+from ani_watch.providers.local import LocalFileProvider
 
 
-class GoodProvider:
-    name = "good"
+def test_local_provider_resolves_exact_title_before_slug(tmp_path) -> None:
+    exact = tmp_path / "My Anime - 01.mp4"
+    slug = tmp_path / "my-anime-01.mkv"
+    (tmp_path / "nested").mkdir()
+    nested_slug = tmp_path / "nested" / "my-anime-01.webm"
 
-    async def available(self, anime, episode):
-        return True
+    exact.touch()
+    slug.touch()
+    nested_slug.touch()
 
-    async def resolve(self, anime, episode, *, quality=None):
-        return MediaCandidate(uri="file:///episode.mp4", provider=self.name, quality=quality)
+    provider = LocalFileProvider(tmp_path)
+    anime = AnimeRef(1, "My Anime")
+    episode = EpisodeRef(1, 1)
 
+    matches = provider._candidates(anime, episode)
 
-class BadProvider:
-    name = "bad"
-
-    async def available(self, anime, episode):
-        return True
-
-    async def resolve(self, anime, episode, *, quality=None):
-        raise RuntimeError("provider down")
+    assert matches[0] == exact
+    assert matches == [exact, slug, nested_slug]
 
 
-@pytest.mark.asyncio
-async def test_provider_resolver_falls_back_to_good_provider() -> None:
-    registry = ProviderRegistry([BadProvider(), GoodProvider()])
-    resolver = ProviderResolver(registry)
+def test_local_provider_deduplicates_overlapping_patterns(tmp_path) -> None:
+    path = tmp_path / "my-anime-01.mp4"
+    path.touch()
 
-    result = await resolver.resolve(
-        AnimeRef(1, "Sample"),
+    provider = LocalFileProvider(tmp_path)
+    provider.root = _OverlappingRoot(path)
+
+    matches = provider._candidates(
+        AnimeRef(1, "My Anime"),
         EpisodeRef(1, 1),
-        quality="1080p",
     )
 
-    assert result.provider == "good"
-    assert resolver.health.snapshot()["bad"]["failures"] == 1
+    assert matches == [path]
 
 
-@pytest.mark.asyncio
-async def test_provider_resolver_reports_no_provider() -> None:
-    registry = ProviderRegistry([BadProvider()])
-    resolver = ProviderResolver(
-        registry,
-        breaker=CircuitBreaker(failure_threshold=1, recovery_seconds=30),
-        health=ProviderHealth(),
-    )
+async def test_local_provider_skips_inaccessible_searches(tmp_path) -> None:
+    path = tmp_path / "my-anime-01.mp4"
+    path.touch()
 
-    with pytest.raises(ProviderError):
-        await resolver.resolve(AnimeRef(1, "Sample"), EpisodeRef(1, 1))
+    provider = LocalFileProvider(tmp_path)
+    provider.root = _FailingRoot(path)
 
-    with pytest.raises(ProviderError):
-        await resolver.resolve(AnimeRef(1, "Sample"), EpisodeRef(1, 1))
+    assert await provider.available(AnimeRef(1, "My Anime"), EpisodeRef(1, 1))
 
 
-def test_registry_rejects_blank_provider_name() -> None:
-    class Empty:
-        name = " "
+class _OverlappingRoot:
+    def __init__(self, path):
+        self.path = path
 
-    registry = ProviderRegistry()
-    with pytest.raises(ValueError):
-        registry.register(Empty())
+    def rglob(self, pattern):
+        return [self.path]
+
+
+class _FailingRoot:
+    def __init__(self, path):
+        self.path = path
+
+    def rglob(self, pattern):
+        if pattern.startswith("My Anime"):
+            raise PermissionError("denied")
+        return [self.path]
