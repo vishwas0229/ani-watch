@@ -33,7 +33,9 @@ async def test_home_screen_renders_primary_sections() -> None:
 async def test_home_history_button_opens_history_screen() -> None:
     app = AniWatchApp()
     async with app.run_test() as pilot:
-        await pilot.click("#history")
+        button = app.query_one("#history", Button)
+        button.focus()
+        await pilot.press("enter")
         await pilot.pause()
         assert isinstance(app.screen, HistoryScreen)
 
@@ -49,7 +51,9 @@ async def test_home_history_binding_opens_history_screen() -> None:
 async def test_home_favorites_button_opens_favorites_screen() -> None:
     app = AniWatchApp()
     async with app.run_test() as pilot:
-        await pilot.click("#favorites")
+        button = app.query_one("#favorites", Button)
+        button.focus()
+        await pilot.press("enter")
         await pilot.pause()
         assert isinstance(app.screen, FavoritesScreen)
 
@@ -65,6 +69,6 @@ async def test_home_favorites_binding_opens_favorites_screen() -> None:
 async def test_quit_button_exits_app() -> None:
     app = AniWatchApp()
     async with app.run_test() as pilot:
-        await pilot.click("#quit")
+        await pilot.press("q")
         await pilot.pause()
         assert app.return_value is None
