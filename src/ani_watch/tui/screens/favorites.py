@@ -7,7 +7,9 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
+from ani_watch.domain.details import AnimeDetails
 from ani_watch.domain.favorite import FavoriteAnime
+from ani_watch.tui.screens.details import AnimeDetailsScreen
 
 
 class FavoritesScreen(Screen[None]):
@@ -70,6 +72,7 @@ class FavoritesScreen(Screen[None]):
         ("j", "next_favorite", "Next"),
         ("k", "previous_favorite", "Previous"),
         ("delete", "remove_selected", "Remove"),
+        ("o", "open_details", "Open"),
     ]
 
     def __init__(self, favorites: Sequence[FavoriteAnime] = ()) -> None:
@@ -150,7 +153,7 @@ class FavoritesScreen(Screen[None]):
                 "Favorites persistence will be connected in the "
                 "library/storage phase."
             )
-        return "Select an anime and press Enter to open its details."
+        return "Select an anime and press Enter, o, or Open Details to view it."
 
     @staticmethod
     def _favorite_id(index: int) -> str:
@@ -263,7 +266,7 @@ class FavoritesScreen(Screen[None]):
         self.query_one("#remove", Button).disabled = not bool(self.favorites)
 
     def open_details(self) -> None:
-        """Expose a details handoff without coupling to a provider."""
+        """Open the selected favorite in the existing details screen."""
         if not self.favorites:
             self.query_one("#favorites-status", Static).update(
                 "Select a favorite first."
@@ -271,10 +274,19 @@ class FavoritesScreen(Screen[None]):
             return
 
         favorite = self.favorites[self._selected_index]
-        self.query_one("#favorites-status", Static).update(
-            f"Details requested for {favorite.title}. "
-            "Navigation to the full details screen will be connected "
-            "when shared screen routing is introduced."
+        self.app.push_screen(
+            AnimeDetailsScreen(
+                AnimeDetails(
+                    anilist_id=favorite.anime_id,
+                    title=favorite.title,
+                    native_title=favorite.native_title,
+                    status=favorite.status,
+                    episodes=favorite.episodes,
+                    score=favorite.score,
+                    genres=favorite.genres,
+                    is_favorite=True,
+                )
+            )
         )
 
     def action_go_back(self) -> None:
@@ -292,3 +304,7 @@ class FavoritesScreen(Screen[None]):
     def action_remove_selected(self) -> None:
         """Handle Delete keyboard shortcut."""
         self.remove_selected()
+
+    def action_open_details(self) -> None:
+        """Handle the o keyboard shortcut."""
+        self.open_details()
