@@ -1,7 +1,5 @@
 """Library dashboard for tracking views."""
 
-from collections.abc import Sequence
-
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
