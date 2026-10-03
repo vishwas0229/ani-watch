@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 from ani_watch.config.settings import AppSettings
 from ani_watch.config.store import SettingsStore
