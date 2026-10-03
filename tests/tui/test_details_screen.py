@@ -60,15 +60,13 @@ async def test_favorite_action_toggles_local_state() -> None:
         favorite = app.screen.query_one("#favorite")
         assert str(favorite.label) == "Favorite"
 
-        favorite.focus()
-        await pilot.press("enter")
+        await pilot.press("t")
         assert str(favorite.label) == "Unfavorite"
         assert "added to favorites locally" in str(
             app.screen.query_one("#details-status").content
         )
 
-        favorite.focus()
-        await pilot.press("enter")
+        await pilot.press("t")
         assert str(favorite.label) == "Favorite"
         assert "removed from favorites locally" in str(
             app.screen.query_one("#details-status").content
