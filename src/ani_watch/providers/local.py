@@ -17,16 +17,28 @@ class LocalFileProvider:
         self.root = root.expanduser().resolve()
 
     def _candidates(self, anime: AnimeRef, episode: EpisodeRef) -> list[Path]:
+        """Return deterministic candidates, preferring exact titles then slugs."""
         slug = "".join(char if char.isalnum() else "-" for char in anime.title.lower()).strip("-")
         patterns = (
-            f"{slug}-{episode.number:02d}.*",
-            f"{slug} - {episode.number:02d}.*",
-            f"{anime.title} - {episode.number:02d}.*",
+            (0, f"{anime.title} - {episode.number:02d}.*"),
+            (1, f"{slug} - {episode.number:02d}.*"),
+            (2, f"{slug}-{episode.number:02d}.*"),
         )
-        matches: list[Path] = []
-        for pattern in patterns:
-            matches.extend(self.root.rglob(pattern))
-        return [path for path in matches if path.is_file()]
+
+        matches: dict[Path, int] = {}
+        for rank, pattern in patterns:
+            try:
+                for path in self.root.rglob(pattern):
+                    try:
+                        if not path.is_file():
+                            continue
+                    except OSError:
+                        continue
+                    matches[path] = min(rank, matches.get(path, rank))
+            except OSError:
+                continue
+
+        return sorted(matches, key=lambda path: (matches[path], path.as_posix().casefold()))
 
     async def available(self, anime: AnimeRef, episode: EpisodeRef) -> bool:
         return bool(self._candidates(anime, episode))
