@@ -9,7 +9,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from ani_watch.storage.models import Base
+from ani_watch.storage.migrations import upgrade
 
 
 def sqlite_path(url: str) -> Path | None:
@@ -46,9 +46,9 @@ class Database:
         )
 
     def create_schema(self) -> None:
-        """Create all current tables for a new installation."""
+        """Upgrade the configured database through the canonical Alembic path."""
         self.engine.dispose()
-        Base.metadata.create_all(self.engine)
+        upgrade(self.engine)
 
     @contextmanager
     def session(self) -> Iterator[Session]:

@@ -1,31 +1,42 @@
-"""Lightweight schema migration manager."""
+"""Alembic-backed database migration helpers."""
 
-import sqlalchemy as sa  # noqa: I001
+from __future__ import annotations
 
-from ani_watch.storage.models import Base
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy.engine import Engine
+
+from ani_watch.domain.errors import StorageError
+
+MIGRATION_HEAD = "head"
 
 
-MIGRATION_VERSION = 1
+def _project_root() -> Path:
+    """Return the repository/package root containing Alembic configuration."""
+    return Path(__file__).resolve().parents[3]
 
 
-def upgrade(engine) -> None:
-    """Create the current schema and record its version."""
-    metadata = sa.MetaData()
-    version_table = sa.Table(
-        "schema_version",
-        metadata,
-        sa.Column("version", sa.Integer, primary_key=True),
-    )
-    metadata.create_all(engine)
+def _alembic_config(engine: Engine) -> Config:
+    """Build an Alembic config for the configured database engine."""
+    root = _project_root()
+    ini_path = root / "alembic.ini"
+    migrations_dir = root / "migrations"
 
-    with engine.begin() as connection:
-        current = connection.execute(
-            sa.select(version_table.c.version).limit(1)
-        ).scalar_one_or_none()
+    if not ini_path.is_file() or not migrations_dir.is_dir():
+        raise StorageError(
+            "Alembic migration files are unavailable. Reinstall Ani-Watch "
+            "with the complete distribution."
+        )
 
-        if current is None:
-            Base.metadata.create_all(engine)
-            connection.execute(sa.insert(version_table).values(version=MIGRATION_VERSION))
-        elif current < MIGRATION_VERSION:
-            Base.metadata.create_all(engine)
-            connection.execute(version_table.update().values(version=MIGRATION_VERSION))
+    config = Config(str(ini_path))
+    config.set_main_option("script_location", str(migrations_dir))
+    database_url = engine.url.render_as_string(hide_password=False).replace("%", "%%")
+    config.set_main_option("sqlalchemy.url", database_url)
+    return config
+
+
+def upgrade(engine: Engine) -> None:
+    """Upgrade the database to the latest Alembic revision."""
+    command.upgrade(_alembic_config(engine), MIGRATION_HEAD)
