@@ -46,7 +46,9 @@ async def test_favorites_selection_updates_status() -> None:
         await app.push_screen(FavoritesScreen(sample_favorites()))
         await pilot.pause()
 
-        await pilot.click("#favorite-1")
+        button = app.screen.query_one("#favorite-1")
+        button.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert app.screen.query_one("#favorite-1").has_class("selected")
@@ -62,7 +64,9 @@ async def test_remove_favorite_updates_list_and_empty_state() -> None:
         await app.push_screen(FavoritesScreen(sample_favorites()))
         await pilot.pause()
 
-        await pilot.click("#remove")
+        remove = app.screen.query_one("#remove")
+        remove.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert len(app.screen.favorites) == 1
@@ -115,7 +119,9 @@ async def test_favorites_screen_back_and_escape() -> None:
     async with app.run_test() as pilot:
         await app.push_screen(FavoritesScreen(sample_favorites()))
         await pilot.pause()
-        await pilot.click("#back")
+        back = app.screen.query_one("#back")
+        back.focus()
+        await pilot.press("enter")
         await pilot.pause()
         assert not isinstance(app.screen, FavoritesScreen)
 
