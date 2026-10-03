@@ -25,6 +25,10 @@ class AniWatchApp(App[None]):
         layout: vertical;
     }
 
+    .screen-content {
+        height: 1fr;
+    }
+
     #welcome {
         height: auto;
         padding: 1 2;
