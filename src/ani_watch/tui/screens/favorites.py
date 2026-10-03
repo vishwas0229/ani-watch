@@ -198,7 +198,7 @@ class FavoritesScreen(Screen[None]):
     def _focus_selected(self) -> None:
         """Focus the currently selected favorite."""
         if self.favorites:
-            self.query_one(self._favorite_id(self._selected_index), Button).focus()
+            self.query_one(f"#{self._favorite_id(self._selected_index)}", Button).focus()
 
     def _move_selection(self, step: int) -> None:
         """Move selection while keeping it inside the list."""
