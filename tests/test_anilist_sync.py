@@ -1,4 +1,3 @@
-import httpx
 import pytest
 
 from ani_watch.auth.anilist import AniListOAuth
