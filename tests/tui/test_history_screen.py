@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from ani_watch.domain.history import WatchHistoryEntry
+from ani_watch.domain.models import WatchHistoryEntry
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.history import HistoryScreen
 
