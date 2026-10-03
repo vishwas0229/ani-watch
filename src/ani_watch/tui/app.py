@@ -4,10 +4,10 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Label, Static
 
+from ani_watch import __version__
+from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.search import SearchScreen
-
-from ani_watch import __version__
 
 
 class AniWatchApp(App[None]):
@@ -85,6 +85,7 @@ class AniWatchApp(App[None]):
         ("h", "show_home", "Home"),
         ("/", "show_search", "Search"),
         ("r", "show_history", "History"),
+        ("f", "show_favorites", "Favorites"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -124,11 +125,12 @@ class AniWatchApp(App[None]):
         with Horizontal(id="home-actions"):
             yield Button("Search", id="search", variant="primary")
             yield Button("History", id="history")
+            yield Button("Favorites", id="favorites")
             yield Button("Library", id="library")
             yield Button("Settings", id="settings")
             yield Button("Quit", id="quit")
         yield Static(
-            "Ready • Use Tab to navigate, / for search, r for history, q to quit.",
+            "Ready • Use Tab to navigate, / search, r history, f favorites, q quit.",
             id="home-status",
         )
         yield Footer()
@@ -142,6 +144,8 @@ class AniWatchApp(App[None]):
             self.push_screen(SearchScreen())
         elif action == "history":
             self.push_screen(HistoryScreen())
+        elif action == "favorites":
+            self.push_screen(FavoritesScreen())
         elif action == "library":
             self.notify("Library screen will be connected in a later issue.")
         elif action == "settings":
@@ -155,10 +159,14 @@ class AniWatchApp(App[None]):
         """Open the watch history screen."""
         self.push_screen(HistoryScreen())
 
+    def action_show_favorites(self) -> None:
+        """Open the favorites screen."""
+        self.push_screen(FavoritesScreen())
+
     def action_show_home(self) -> None:
         """Return to the home dashboard."""
         self.notify("You are already on Home.")
 
     def action_help(self) -> None:
         """Show the current keyboard shortcuts."""
-        self.notify("Tab: navigate • /: Search • r: History • q: Quit")
+        self.notify("Tab: navigate • /: Search • r: History • f: Favorites • q: Quit")
