@@ -163,7 +163,7 @@ class LibraryScreen(Screen[None]):
 
         self.history = tuple(history)
         self.favorites = tuple(favorites)
-        self.refresh(recompose=True)
+        self.recompose()
         self.query_one("#library-status", Static).update(
             "Library refreshed from PostgreSQL."
         )
