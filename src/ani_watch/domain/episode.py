@@ -7,8 +7,11 @@ from dataclasses import dataclass
 class EpisodeItem:
     """Provider-neutral episode data consumed by the TUI."""
 
+    anime_id: int
     number: int
     title: str | None = None
     duration_minutes: int | None = None
     watched: bool = False
     available: bool = True
+    source_uri: str | None = None
+    local_path: str | None = None
