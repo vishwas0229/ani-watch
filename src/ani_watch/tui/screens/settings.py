@@ -79,8 +79,7 @@ class SettingsScreen(Screen[None]):
                 yield Label("Theme", classes="setting-label")
                 yield Select(
                     options=[
-                        ("Textual Dark", "textual-dark"),
-                        ("Textual Light", "textual-light"),
+                        ("Midnight", "midnight"),
                         ("Solarized", "solarized"),
                         ("Textual Dark", "textual-dark"),
                         ("Textual Light", "textual-light"),
