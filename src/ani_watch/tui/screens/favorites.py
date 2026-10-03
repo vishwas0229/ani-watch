@@ -7,8 +7,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.details import AnimeDetails
-from ani_watch.domain.favorite import FavoriteAnime
+from ani_watch.domain.models import AnimeDetails, FavoriteAnime
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 
 
