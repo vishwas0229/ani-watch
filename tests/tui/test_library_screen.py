@@ -3,6 +3,8 @@ from ani_watch.domain.models import (
     LibrarySnapshot,
     RecentlyWatchedItem,
 )
+from textual.widgets import Button, Static
+
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.library import LibraryScreen
 
@@ -25,12 +27,10 @@ async def test_library_screen_renders_tracking_sections() -> None:
         await pilot.pause()
 
         assert "5 watched" in str(app.screen.query_one("#library-summary").content)
-        assert "Sample Anime • Episode 6 • 25% complete" in str(
-            app.screen.query_one("#continue-list").render()
-        )
-        assert "Sample Anime • Episode 5" in str(
-            app.screen.query_one("#recent-list").render()
-        )
+        continue_button = app.screen.query_one("#continue-list Button", Button)
+        assert "Sample Anime • Episode 6 • 25% complete" in str(continue_button.label)
+        recent_item = app.screen.query_one("#recent-list Static", Static)
+        assert recent_item.content == "Sample Anime • Episode 5"
 
 
 async def test_library_empty_state() -> None:
@@ -49,6 +49,8 @@ async def test_library_back() -> None:
 
     async with app.run_test() as pilot:
         await app.push_screen(LibraryScreen())
-        await pilot.click("#back")
+        back = app.screen.query_one("#back", Button)
+        back.focus()
+        await pilot.press("enter")
         await pilot.pause()
         assert not isinstance(app.screen, LibraryScreen)
