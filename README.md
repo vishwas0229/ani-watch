@@ -6,12 +6,18 @@ A modular terminal-based anime discovery, tracking, and playback client.
 
 Ani-Watch is being built incrementally. The complete roadmap is tracked in GitHub Project #10, with each implementation step handled as an individual issue.
 
-Current phase: **Foundation**
+Current phase: **TUI**
+
+## Supported environment
+
+Ani-Watch is **Conda-only**. The application requires an active Conda environment at runtime and will stop with a clear error if started outside Conda.
+
+Supported Python version: **3.12+**
 
 ## Planned stack
 
+- Conda
 - Python 3.12+
-- uv
 - Textual
 - Typer
 - AniList GraphQL API
@@ -21,43 +27,66 @@ Current phase: **Foundation**
 - Pydantic + httpx
 - pytest + Ruff
 
-## Foundation setup
+## Conda setup
 
-Create the environment and install the development dependencies:
+### Recommended: create the project environment
+
+From the repository root:
 
 ```bash
-uv sync --extra dev
+conda env create -f environment.yml
+conda activate ani-watch
 ```
 
-Run the application from the repository root:
+The environment file installs the project in editable mode together with the development dependencies.
+
+### Existing Conda environment
+
+You can also use an existing Conda environment such as `dev`:
 
 ```bash
-uv run python main.py
+conda activate dev
+python -m pip install -e ".[dev]"
 ```
 
-The repository-level `main.py` is the primary source-checkout launcher. The installable `ani-watch` console command remains available after the package is installed:
+### Verify Conda
 
 ```bash
-uv run ani-watch
+conda info --envs
+echo "$CONDA_PREFIX"
 ```
 
-Run the installation check:
+`CONDA_PREFIX` should point to the active Conda environment.
+
+## Run Ani-Watch
+
+From the repository root:
 
 ```bash
-uv run ani-watch doctor
+python main.py
 ```
 
-Run tests:
+The packaged entry points are also available after the editable install:
 
 ```bash
-uv run pytest
+ani-watch
+ani-watch doctor
+python -m ani_watch
 ```
 
-Run linting:
+All application entry points require an active Conda environment.
+
+## Run tests
 
 ```bash
-uv run ruff check .
-uv run ruff format --check .
+python -m pytest
+```
+
+## Run linting
+
+```bash
+python -m ruff check .
+python -m ruff format --check .
 ```
 
 ## Architecture
