@@ -9,7 +9,7 @@ from ani_watch.player.manager import PlaybackManager
 
 
 class PlayerScreen(Screen[None]):
-    """Expose playback lifecycle and media-control actions."""
+    """Expose playback lifecycle, track, and media-control actions."""
 
     CSS = """
     #player-page {
@@ -46,6 +46,16 @@ class PlayerScreen(Screen[None]):
         width: 18;
         margin-right: 1;
     }
+
+    .control-label {
+        width: 16;
+        padding: 1 0;
+    }
+
+    .control-select {
+        width: 1fr;
+        margin-right: 1;
+    }
     """
 
     BINDINGS = [
@@ -64,8 +74,8 @@ class PlayerScreen(Screen[None]):
         with Vertical(id="player-page"):
             yield Label("PLAYER", id="player-heading")
             yield Static(
-                "VLC playback controls are ready. Select media from an episode "
-                "and the player manager will maintain position and completion state.",
+                "VLC playback controls are ready. Track selection and playback "
+                "position are managed by the player adapter.",
                 id="player-status",
             )
             with Horizontal(classes="control-row"):
@@ -81,13 +91,60 @@ class PlayerScreen(Screen[None]):
                 yield Input("0", id="seek-input")
                 yield Button("Seek", id="seek")
             with Horizontal(classes="control-row"):
+                yield Label("Quality", classes="control-label")
                 yield Select(
                     [("1080p", "1080p"), ("720p", "720p"), ("480p", "480p")],
                     value="1080p",
                     id="quality",
+                    classes="control-select",
                 )
-                yield Button("Apply Quality", id="quality-button")
+                yield Button("Apply", id="quality-button")
+            with Horizontal(classes="control-row"):
+                yield Label("Audio", classes="control-label")
+                yield Select(
+                    [("Default", "default")],
+                    value="default",
+                    id="audio-track",
+                    classes="control-select",
+                    disabled=self.manager is None,
+                )
+                yield Button("Apply", id="audio-button", disabled=self.manager is None)
+            with Horizontal(classes="control-row"):
+                yield Label("Subtitles", classes="control-label")
+                yield Select(
+                    [("Default", "default")],
+                    value="default",
+                    id="subtitle-track",
+                    classes="control-select",
+                    disabled=self.manager is None,
+                )
+                yield Button(
+                    "Apply",
+                    id="subtitle-button",
+                    disabled=self.manager is None,
+                )
             yield Button("Back", id="back")
+
+    def on_mount(self) -> None:
+        """Populate available VLC tracks when a manager is attached."""
+        if self.manager is None:
+            return
+
+        try:
+            audio = [("Default", "default")]
+            audio.extend(
+                (label, str(track_id))
+                for track_id, label in self.manager.player.audio_tracks()
+            )
+            subtitles = [("Default", "default")]
+            subtitles.extend(
+                (label, str(track_id))
+                for track_id, label in self.manager.player.subtitle_tracks()
+            )
+            self.query_one("#audio-track", Select).set_options(audio)
+            self.query_one("#subtitle-track", Select).set_options(subtitles)
+        except Exception as exc:
+            self._status(f"Track discovery unavailable: {exc}")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle player controls."""
@@ -102,6 +159,7 @@ class PlayerScreen(Screen[None]):
         try:
             if action == "play":
                 self.manager.resume()
+                self._paused = False
             elif action == "pause":
                 self.manager.pause()
                 self._paused = True
@@ -120,6 +178,17 @@ class PlayerScreen(Screen[None]):
             elif action == "quality-button":
                 quality = str(self.query_one("#quality", Select).value)
                 self.manager.player.set_quality(quality)
+            elif action == "audio-button":
+                track = str(self.query_one("#audio-track", Select).value)
+                if track != "default":
+                    self.manager.player.set_audio_track(int(track))
+            elif action == "subtitle-button":
+                track = str(self.query_one("#subtitle-track", Select).value)
+                if track != "default":
+                    self.manager.player.set_subtitle_track(int(track))
+        except (TypeError, ValueError) as exc:
+            self._status(f"Invalid player value: {exc}")
+            return
         except Exception as exc:
             self._status(f"Player error: {exc}")
             return
