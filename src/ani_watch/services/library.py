@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import func, select
 
-from ani_watch.domain.models import WatchHistoryEntry
+from ani_watch.domain.models import ContinueWatchingItem, RecentlyWatchedItem, WatchHistoryEntry
 from ani_watch.storage.database import Database
-from ani_watch.storage.models import FavoriteRecord, HistoryRecord, ProgressRecord
+from ani_watch.storage.models import FavoriteRecord, HistoryRecord
 from ani_watch.storage.repositories import (
     AnimeRepository,
     FavoriteRepository,
@@ -66,19 +66,21 @@ class LibraryService:
                 )
             )
 
-    def continue_watching(self, limit: int = 20) -> list[ProgressRecord]:
-        with self.db.session() as session:
-            return list(
-                session.scalars(
-                    select(ProgressRecord)
-                    .where(ProgressRecord.completed.is_(False))
-                    .order_by(desc(ProgressRecord.updated_at))
-                    .limit(limit)
-                ).all()
-            )
+    def continue_watching(self, limit: int = 20) -> list[ContinueWatchingItem]:
+        return self.progress.list_continue_watching(limit)
 
-    def recently_watched(self, limit: int = 20) -> list[HistoryRecord]:
-        return self.history.list_recent(limit)
+    def recently_watched(self, limit: int = 20) -> list[WatchHistoryEntry]:
+        return self.history.list_recent_entries(limit)
+
+    def recently_completed(self, limit: int = 20) -> list[RecentlyWatchedItem]:
+        return [
+            RecentlyWatchedItem(
+                anime_id=entry.anime_id,
+                anime_title=entry.anime_title,
+                episode_number=entry.episode_number,
+            )
+            for entry in self.recently_watched(limit)
+        ]
 
     def statistics(self) -> dict[str, int]:
         with self.db.session() as session:

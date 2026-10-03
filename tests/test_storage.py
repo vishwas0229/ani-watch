@@ -1,9 +1,11 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ani_watch.domain.models import AnimeDetails, WatchHistoryEntry
 from ani_watch.storage.database import Database
 from ani_watch.storage.repositories import (
     AnimeRepository,
+    EpisodeRepository,
     FavoriteRepository,
     HistoryRepository,
     ProgressRepository,
@@ -81,3 +83,45 @@ def test_history_records_watch_activity(tmp_path: Path) -> None:
     rows = HistoryRepository(db).list_recent()
     assert rows[0].anime_id == 3
     assert rows[0].episode_number == 4
+
+
+def test_history_projection_includes_anime_and_episode_titles(tmp_path: Path) -> None:
+    db = make_db(tmp_path)
+    AnimeRepository(db).upsert(AnimeDetails(anilist_id=4, title="Projection Anime"))
+    EpisodeRepository(db).upsert(
+        4,
+        7,
+        title="The Turning Point",
+    )
+    HistoryRepository(db).record(
+        WatchHistoryEntry(
+            anime_id=4,
+            anime_title="Projection Anime",
+            episode_number=7,
+            watched_at=datetime(2026, 10, 3, 21, 30, tzinfo=UTC),
+            progress_seconds=600,
+            duration_seconds=1200,
+        )
+    )
+
+    entry = HistoryRepository(db).list_recent_entries(1)[0]
+
+    assert entry.anime_title == "Projection Anime"
+    assert entry.episode_title == "The Turning Point"
+    assert entry.episode_number == 7
+    assert entry.progress_seconds == 600
+
+
+def test_continue_watching_projection_includes_anime_title(tmp_path: Path) -> None:
+    db = make_db(tmp_path)
+    AnimeRepository(db).upsert(AnimeDetails(anilist_id=5, title="Continue Anime"))
+
+    progress = ProgressRepository(db)
+    progress.save(5, 8, 300, 1200)
+
+    item = progress.list_continue_watching(1)[0]
+
+    assert item.anime_title == "Continue Anime"
+    assert item.episode_number == 8
+    assert item.position_seconds == 300
+    assert item.duration_seconds == 1200
