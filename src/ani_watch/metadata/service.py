@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ani_watch.domain.models import AnimeDetails, AnimeRef
+from ani_watch.domain.models import AnimeDetails, AnimeRef, EpisodeItem
 from ani_watch.metadata.anilist import AniListClient
 
 
@@ -44,6 +44,59 @@ class AnimeMetadataService:
             year=self._int(item.get("seasonYear")),
             format=self._text(item.get("format")),
         )
+
+    async def episode_items(self, anime_id: int) -> list[EpisodeItem]:
+        """Return stable episode rows from AniList metadata."""
+        first_page = await self.client.episodes(anime_id, page=1, limit=25)
+        total = self._int(first_page.get("episodes"))
+        duration = self._int(first_page.get("duration"))
+
+        schedule = first_page.get("airingSchedule") or {}
+        if not isinstance(schedule, dict):
+            schedule = {}
+
+        scheduled = self._episode_numbers(schedule.get("nodes"))
+        has_next = bool((schedule.get("pageInfo") or {}).get("hasNextPage"))
+
+        page = 2
+        while total is None and has_next:
+            next_page = await self.client.episodes(anime_id, page=page, limit=25)
+            next_schedule = next_page.get("airingSchedule") or {}
+            if not isinstance(next_schedule, dict):
+                break
+            scheduled.update(self._episode_numbers(next_schedule.get("nodes")))
+            page_info = next_schedule.get("pageInfo") or {}
+            has_next = bool(page_info.get("hasNextPage"))
+            page += 1
+
+        if total is not None and total > 0:
+            numbers = range(1, total + 1)
+        else:
+            numbers = sorted(scheduled)
+
+        return [
+            EpisodeItem(
+                number=number,
+                # AniList exposes a general duration for the anime, not a
+                # stable per-episode title in this mapping.
+                title=None,
+                duration_minutes=duration,
+                available=True,
+            )
+            for number in numbers
+            if number > 0
+        ]
+
+    @classmethod
+    def _episode_numbers(cls, nodes: Any) -> set[int]:
+        """Extract positive numeric episode numbers and ignore specials."""
+        return {
+            number
+            for node in nodes or []
+            if isinstance(node, dict)
+            for number in (cls._int(node.get("episode")),)
+            if number is not None and number > 0
+        }
 
     @staticmethod
     def _title(value: Any) -> str:

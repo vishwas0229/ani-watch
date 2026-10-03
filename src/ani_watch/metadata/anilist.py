@@ -46,6 +46,23 @@ query ($id: Int!) {
 }
 """
 
+EPISODES_QUERY = """
+query ($id: Int!, $page: Int, $perPage: Int) {
+  Media(id: $id, type: ANIME) {
+    episodes
+    duration
+    airingSchedule(page: $page, perPage: $perPage, notYetAired: false) {
+      nodes {
+        episode
+      }
+      pageInfo {
+        hasNextPage
+      }
+    }
+  }
+}
+"""
+
 
 class AniListClient:
     """Small async client around the public AniList GraphQL endpoint."""
@@ -139,6 +156,26 @@ class AniListClient:
     async def details(self, anime_id: int) -> dict[str, Any]:
         """Fetch one anime's metadata by AniList ID."""
         data = await self.request(DETAILS_QUERY, {"id": anime_id})
+        media = data.get("Media")
+        if not isinstance(media, dict):
+            raise MetadataError(f"AniList anime {anime_id} was not found.")
+        return media
+
+    async def episodes(
+        self,
+        anime_id: int,
+        *,
+        page: int = 1,
+        limit: int = 25,
+    ) -> dict[str, Any]:
+        """Fetch episode-count, duration, and aired schedule metadata."""
+        if page < 1:
+            raise ValueError("Episode metadata page must be positive.")
+        limit = max(1, min(limit, 25))
+        data = await self.request(
+            EPISODES_QUERY,
+            {"id": anime_id, "page": page, "perPage": limit},
+        )
         media = data.get("Media")
         if not isinstance(media, dict):
             raise MetadataError(f"AniList anime {anime_id} was not found.")

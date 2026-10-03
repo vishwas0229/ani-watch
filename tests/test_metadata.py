@@ -72,6 +72,110 @@ async def test_anilist_details_maps_metadata() -> None:
     assert details.genres == ("Drama", "Fantasy")
 
 
+async def test_anilist_episodes_map_known_episode_count() -> None:
+    payload = {
+        "data": {
+            "Media": {
+                "id": 2,
+                "episodes": 3,
+                "duration": 24,
+                "airingSchedule": {
+                    "nodes": [{"episode": 1}, {"episode": 2}, {"episode": 0}],
+                    "pageInfo": {"hasNextPage": False},
+                },
+            }
+        }
+    }
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    service = AnimeMetadataService(client)
+
+    episodes = await service.episode_items(2)
+
+    assert [episode.number for episode in episodes] == [1, 2, 3]
+    assert all(episode.title is None for episode in episodes)
+    assert all(episode.duration_minutes == 24 for episode in episodes)
+    assert all(episode.available for episode in episodes)
+
+
+async def test_anilist_episodes_use_schedule_when_count_is_missing() -> None:
+    responses = [
+        httpx.Response(
+            200,
+            json={
+                "data": {
+                    "Media": {
+                        "id": 3,
+                        "episodes": None,
+                        "duration": None,
+                        "airingSchedule": {
+                            "nodes": [{"episode": 2}, {"episode": 1}, {"episode": 0}],
+                            "pageInfo": {"hasNextPage": False},
+                        },
+                    }
+                }
+            },
+        )
+    ]
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return responses.pop(0)
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    service = AnimeMetadataService(client)
+
+    episodes = await service.episode_items(3)
+
+    assert [episode.number for episode in episodes] == [1, 2]
+    assert all(episode.duration_minutes is None for episode in episodes)
+
+
+async def test_anilist_episodes_page_through_schedule_when_count_unknown() -> None:
+    payloads = [
+        {
+            "data": {
+                "Media": {
+                    "id": 4,
+                    "episodes": None,
+                    "duration": 23,
+                    "airingSchedule": {
+                        "nodes": [{"episode": 2}],
+                        "pageInfo": {"hasNextPage": True},
+                    },
+                }
+            }
+        },
+        {
+            "data": {
+                "Media": {
+                    "id": 4,
+                    "episodes": None,
+                    "duration": 23,
+                    "airingSchedule": {
+                        "nodes": [{"episode": 27}, {"episode": 1}],
+                        "pageInfo": {"hasNextPage": False},
+                    },
+                }
+            }
+        },
+    ]
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        response = payloads.pop(0)
+        return httpx.Response(200, json=response)
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    service = AnimeMetadataService(client)
+
+    episodes = await service.episode_items(4)
+
+    assert [episode.number for episode in episodes] == [1, 2, 27]
+    assert all(episode.duration_minutes == 23 for episode in episodes)
+
+
 async def test_anilist_graphql_errors_raise_metadata_error() -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"errors": [{"message": "bad query"}]})
