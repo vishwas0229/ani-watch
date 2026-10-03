@@ -5,10 +5,10 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class EpisodeItem:
-    """Provider-neutral episode data consumed by the TUI."""
+    """Provider-neutral episode data consumed by the TUI and player."""
 
-    anime_id: int
     number: int
+    anime_id: int = 0
     title: str | None = None
     duration_minutes: int | None = None
     watched: bool = False
