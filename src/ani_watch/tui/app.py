@@ -4,6 +4,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Label, Static
 
+from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.search import SearchScreen
 
 from ani_watch import __version__
@@ -83,6 +84,7 @@ class AniWatchApp(App[None]):
         ("?", "help", "Help"),
         ("h", "show_home", "Home"),
         ("/", "show_search", "Search"),
+        ("r", "show_history", "History"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -121,10 +123,14 @@ class AniWatchApp(App[None]):
                     )
         with Horizontal(id="home-actions"):
             yield Button("Search", id="search", variant="primary")
+            yield Button("History", id="history")
             yield Button("Library", id="library")
             yield Button("Settings", id="settings")
             yield Button("Quit", id="quit")
-        yield Static("Ready • Use Tab to navigate, ? for help, q to quit.", id="home-status")
+        yield Static(
+            "Ready • Use Tab to navigate, / for search, r for history, q to quit.",
+            id="home-status",
+        )
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -134,6 +140,8 @@ class AniWatchApp(App[None]):
             self.exit()
         elif action == "search":
             self.push_screen(SearchScreen())
+        elif action == "history":
+            self.push_screen(HistoryScreen())
         elif action == "library":
             self.notify("Library screen will be connected in a later issue.")
         elif action == "settings":
@@ -143,10 +151,14 @@ class AniWatchApp(App[None]):
         """Open the anime search screen."""
         self.push_screen(SearchScreen())
 
+    def action_show_history(self) -> None:
+        """Open the watch history screen."""
+        self.push_screen(HistoryScreen())
+
     def action_show_home(self) -> None:
         """Return to the home dashboard."""
         self.notify("You are already on Home.")
 
     def action_help(self) -> None:
         """Show the current keyboard shortcuts."""
-        self.notify("Tab: navigate • Enter: activate • h: Home • q: Quit")
+        self.notify("Tab: navigate • /: Search • r: History • q: Quit")
