@@ -1,52 +1,42 @@
 """Search screen for Ani-Watch."""
 
+from __future__ import annotations
+
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, Static
 
+from ani_watch.domain.errors import AniWatchError
+from ani_watch.domain.models import AnimeRef
+from ani_watch.metadata.anilist import AniListClient
+from ani_watch.metadata.service import AnimeMetadataService
+from ani_watch.tui.screens.details import AnimeDetailsScreen
+
 
 class SearchScreen(Screen[None]):
-    """Keyboard-friendly anime search surface."""
+    """Search AniList and open an anime's details."""
 
     CSS = """
     #search-page {
-        width: 90%;
-        max-width: 110;
-        height: auto;
-        padding: 2;
+        width: 92%;
+        max-width: 120;
+        height: 100%;
+        padding: 1 2;
         margin: 1 2;
     }
-
-    #search-heading {
-        text-style: bold;
-        color: $accent;
-        margin-bottom: 1;
-    }
-
-    #search-input {
-        width: 1fr;
-    }
-
-    #search-submit {
-        margin-left: 1;
-    }
-
-    #search-status {
-        height: auto;
-        margin: 1 0;
-        color: $text-muted;
-    }
-
+    #search-heading { text-style: bold; color: $accent; margin-bottom: 1; }
+    #search-input { width: 1fr; }
+    #search-submit { margin-left: 1; }
+    #search-status { height: auto; margin: 1 0; color: $text-muted; }
     #search-results {
-        min-height: 8;
-        height: auto;
-        border: round $secondary;
-        padding: 1 2;
+        height: 1fr; border: round $secondary; padding: 1;
     }
+    .search-result { width: 1fr; margin-bottom: 1; }
+    #back { margin-top: 1; }
 
-    #back {
-        margin-top: 1;
+    @media (max-width: 60) {
+        #search-page { width: 100%; margin: 0; }
     }
     """
 
@@ -55,61 +45,109 @@ class SearchScreen(Screen[None]):
         ("/", "focus_search", "Search"),
     ]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._refs: dict[str, AnimeRef] = {}
+
     def compose(self) -> ComposeResult:
-        """Render the search controls and empty-state results area."""
         with Vertical(id="search-page"):
             yield Label("SEARCH ANIME", id="search-heading")
             with Horizontal():
-                yield Input(
-                    placeholder="Enter an anime title…",
-                    id="search-input",
-                )
+                yield Input(placeholder="Enter an anime title…", id="search-input")
                 yield Button("Search", id="search-submit", variant="primary")
-            yield Static(
-                "Search is ready. Provider-backed results will be connected "
-                "through the metadata service in the next phase.",
-                id="search-status",
-            )
-            yield Static(
-                "No results yet. Enter a title above.",
-                id="search-results",
-            )
+            yield Static("Search the AniList catalog.", id="search-status")
+            with VerticalScroll(id="search-results"):
+                yield Static("No results yet. Enter a title above.", id="search-empty")
             yield Button("Back", id="back")
 
     def on_mount(self) -> None:
-        """Focus the search input when the screen opens."""
         self.query_one("#search-input", Input).focus()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle search and back actions."""
-        if event.button.id == "search-submit":
+        action = event.button.id
+        if action == "search-submit":
             self.submit_search()
-        elif event.button.id == "back":
+        elif action == "back":
             self.app.pop_screen()
+        elif action in self._refs:
+            self.open_details(self._refs[action])
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Submit a search when Enter is pressed in the input."""
         if event.input.id == "search-input":
             self.submit_search()
 
     def submit_search(self) -> None:
-        """Validate the query and show the current search state."""
         query = self.query_one("#search-input", Input).value.strip()
-        status = self.query_one("#search-status", Static)
-
         if not query:
-            status.update("Enter an anime title to search.")
+            self.query_one("#search-status", Static).update(
+                "Enter an anime title to search."
+            )
+            return
+        self.query_one("#search-status", Static).update(
+            f'Searching AniList for "{query}"…'
+        )
+        self.run_worker(self._perform_search(query), exclusive=True)
+
+    async def _perform_search(self, query: str) -> None:
+        service = AnimeMetadataService(AniListClient())
+        try:
+            refs = await service.search(query)
+        except AniWatchError as exc:
+            self.query_one("#search-status", Static).update(str(exc))
+            return
+        except Exception:
+            self.query_one("#search-status", Static).update(
+                "Search failed. Check your network connection and try again."
+            )
+            return
+        finally:
+            await service.client.close()
+
+        self._refs.clear()
+        results = self.query_one("#search-results", VerticalScroll)
+        await results.remove_children()
+
+        if not refs:
+            results.mount(Static("No anime found.", id="search-empty"))
+            self.query_one("#search-status", Static).update("No results found.")
             return
 
-        status.update(
-            f'Search requested for "{query}". Metadata provider integration '
-            "will populate results in the next phase."
+        for index, ref in enumerate(refs):
+            button_id = f"result-{index}"
+            self._refs[button_id] = ref
+            results.mount(
+                Button(
+                    ref.title,
+                    id=button_id,
+                    classes="search-result",
+                )
+            )
+        self.query_one("#search-status", Static).update(
+            f"Found {len(refs)} anime. Select one to open details."
         )
 
+    def open_details(self, ref: AnimeRef) -> None:
+        self.run_worker(self._load_details(ref), exclusive=True)
+
+    async def _load_details(self, ref: AnimeRef) -> None:
+        status = self.query_one("#search-status", Static)
+        status.update(f"Loading details for {ref.title}…")
+        client = AniListClient()
+        service = AnimeMetadataService(client)
+        try:
+            anime = await service.details(ref.anilist_id)
+        except AniWatchError as exc:
+            status.update(str(exc))
+            return
+        except Exception:
+            status.update("Unable to load anime details.")
+            return
+        finally:
+            await client.close()
+        self.app.push_screen(AnimeDetailsScreen(anime))
+
     def action_focus_search(self) -> None:
-        """Focus the search input from the keyboard."""
         self.query_one("#search-input", Input).focus()
 
     def action_go_back(self) -> None:
-        """Return to the previous screen."""
         self.app.pop_screen()

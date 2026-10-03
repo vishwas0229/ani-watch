@@ -3,6 +3,9 @@
 import typer
 
 from ani_watch.config.runtime import CondaEnvironmentError, require_conda_environment
+from ani_watch.config.settings import AppSettings
+from ani_watch.storage.database import Database
+from ani_watch.storage.migrations import upgrade
 
 app = typer.Typer(
     name="ani-watch",
@@ -10,11 +13,27 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
+db_app = typer.Typer(help="Database administration commands.")
+app.add_typer(db_app, name="db")
+
 
 @app.command()
 def doctor() -> None:
     """Check the local Ani-Watch installation."""
-    typer.echo("Ani-Watch foundation is installed in a Conda environment.")
+    settings = AppSettings()
+    typer.echo("Ani-Watch environment: Conda")
+    typer.echo(f"Database: {settings.database_url}")
+    typer.echo("VLC: available through python-vlc when the native VLC runtime is installed.")
+    typer.echo("Redis: optional")
+
+
+@db_app.command("upgrade")
+def db_upgrade() -> None:
+    """Create or upgrade the configured database schema."""
+    settings = AppSettings()
+    database = Database(settings.database_url)
+    upgrade(database.engine)
+    typer.echo("Database schema is up to date.")
 
 
 @app.callback(invoke_without_command=True)

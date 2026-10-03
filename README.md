@@ -1,98 +1,89 @@
 # Ani-Watch
 
-A modular terminal-based anime discovery, tracking, and playback client.
+A modular terminal-based anime discovery, tracking, library and playback client.
 
-## Development status
+## Current status
 
-Ani-Watch is being built incrementally. The complete roadmap is tracked in GitHub Project #10, with each implementation step handled as an individual issue.
+The application is in active development and now contains the end-to-end architecture for the TUI, AniList metadata, local persistence, playback, providers, synchronization, caching, packaging and reliability layers.
 
-Current phase: **TUI**
+## Supported runtime
 
-## Supported environment
-
-Ani-Watch is **Conda-only**. The application requires an active Conda environment at runtime and will stop with a clear error if started outside Conda.
-
-Supported Python version: **3.12+**
-
-## Planned stack
-
-- Conda
-- Python 3.12+
-- Textual
-- Typer
-- AniList GraphQL API
-- PostgreSQL + SQLAlchemy 2
-- VLC/libVLC
-- Redis (caching)
-- Pydantic + httpx
-- pytest + Ruff
-
-## Conda setup
-
-Create the project environment from the repository root:
+Ani-Watch is **Conda-only** and requires the repository environment:
 
 ```bash
 conda env create -f environment.yml
 conda activate ani-watch
+python -m pip install -e ".[dev]"
 ```
 
-The environment file installs the project in editable mode together with the development dependencies.
-
-## Run Ani-Watch
-
-From the repository root:
+The primary source-checkout launcher is:
 
 ```bash
 python main.py
 ```
 
-The packaged entry points are also available after the editable install:
+## Features
+
+- Textual TUI with Home, Search, Details, Episodes, History, Favorites, Library and Settings screens
+- Keyboard navigation with global shortcuts and responsive terminal layouts
+- Theme selection and persisted UI/playback preferences
+- AniList GraphQL search and anime details
+- SQLAlchemy 2 persistence with SQLite for local use and PostgreSQL support
+- Initial Alembic migration
+- Watch history, favorites, progress, continue-watching and library statistics
+- VLC/libVLC playback adapter with pause, seek, volume and audio/subtitle track selection
+- Resume playback, auto-next configuration, skip hooks, local-first preference and recovery
+- Provider registry, resolver fallback, health monitoring and circuit breaking
+- Built-in local-file provider for user-owned media
+- AniList OAuth login helpers, secure OS credential storage, list sync and mutations
+- Memory cache, optional Redis cache, timeout/retry handling, rate-limit handling and offline/degraded mode
+- Conda installers for Linux, macOS and Windows
+- GitHub Actions CI and tagged release automation
+
+## External requirements
+
+The Python dependencies are installed through the Conda environment. VLC/libVLC is required by the playback adapter. PostgreSQL and Redis are optional services enabled through configuration.
+
+## Configuration
+
+User configuration is stored in the platform configuration directory. See [Configuration](docs/configuration.md).
+
+Important runtime settings include:
+
+- database URL
+- optional Redis URL
+- local media root
+- playback quality, audio, subtitle, volume, auto-next and local-first preferences
+- UI theme and density
+- HTTP timeout and retry count
+- AniList OAuth application settings
+
+## Documentation
+
+- [Installation](docs/installation.md)
+- [Configuration](docs/configuration.md)
+- [Architecture](docs/architecture.md)
+- [Providers](docs/providers.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+
+## Development checks
 
 ```bash
-ani-watch
-ani-watch doctor
-python -m ani_watch
-```
-
-All application entry points require the `ani-watch` Conda environment to be active.
-
-## Run tests
-
-```bash
+conda activate ani-watch
 python -m pytest
-```
-
-## Run linting
-
-```bash
 python -m ruff check .
 python -m ruff format --check .
 ```
 
-## Architecture
+## Project roadmap
 
-Ani-Watch uses explicit package boundaries so the UI, business logic, external services, persistence, and playback engine can evolve independently.
+The implementation plan is tracked in GitHub Project #10 and [Project Roadmap: Ani-Watch](https://github.com/vishwas0229/ani-watch/issues/1).
 
-```text
-CLI / TUI
-    ↓
-Application Services
-    ↓
-Domain
-    ↓
-Adapters / Infrastructure
-    ├── Metadata (AniList)
-    ├── Storage (PostgreSQL)
-    ├── Player (VLC)
-    ├── Providers / Resolvers
-    └── Cache (Redis)
-```
+## Safety boundary
 
-See [Architecture](docs/architecture.md) for the package responsibilities and dependency direction.
-
-## Roadmap
-
-See [Project Roadmap: Ani-Watch](https://github.com/vishwas0229/ani-watch/issues/1) for the complete feature plan.
+The provider layer is intended for authorized or user-owned media sources. Ani-Watch does not implement DRM bypassing or unauthorized access to copyrighted streams.
 
 ## License
 
