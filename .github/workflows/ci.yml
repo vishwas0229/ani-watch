@@ -46,5 +46,8 @@ jobs:
       - name: Run Ruff checks
         run: python -m ruff check .
 
+      - name: Show formatter diff
+        run: python -m ruff format --diff tests/test_migrations.py || true
+
       - name: Check formatting
         run: python -m ruff format --check .
