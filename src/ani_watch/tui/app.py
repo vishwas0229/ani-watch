@@ -5,7 +5,11 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Label, Static
 
 from ani_watch import __version__
+from ani_watch.config.settings import AppSettings
 from ani_watch.config.store import SettingsStore
+from ani_watch.metadata.anilist import AniListClient
+from ani_watch.metadata.cache import MemoryCache
+from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.library import LibraryScreen
@@ -61,9 +65,28 @@ class AniWatchApp(App[None]):
         ("s", "show_settings", "Settings"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        settings: AppSettings | None = None,
+        metadata_service: CachedMetadataService | None = None,
+    ) -> None:
         super().__init__()
-        self.settings = SettingsStore().load()
+        self.settings = settings or SettingsStore().load()
+        self._owns_metadata_service = metadata_service is None
+        self.metadata_service = metadata_service or CachedMetadataService(
+            AniListClient(
+                timeout=self.settings.network.timeout_seconds,
+                retries=self.settings.network.retries,
+            ),
+            cache=MemoryCache(),
+            offline=self.settings.network.offline_mode,
+        )
+
+    async def on_unmount(self) -> None:
+        """Release resources owned by the application shell."""
+        if self._owns_metadata_service:
+            await self.metadata_service.close()
 
     def on_mount(self) -> None:
         self.apply_theme(self.settings.ui.theme)
@@ -126,7 +149,7 @@ class AniWatchApp(App[None]):
         if action == "quit":
             self.exit()
         elif action == "search":
-            self.push_screen(SearchScreen())
+            self.push_screen(SearchScreen(metadata_service=self.metadata_service))
         elif action == "history":
             self.push_screen(HistoryScreen())
         elif action == "favorites":
@@ -143,7 +166,7 @@ class AniWatchApp(App[None]):
 
     def action_show_search(self) -> None:
         """Open the anime search screen."""
-        self.push_screen(SearchScreen())
+        self.push_screen(SearchScreen(metadata_service=self.metadata_service))
 
     def action_show_history(self) -> None:
         """Open the watch history screen."""

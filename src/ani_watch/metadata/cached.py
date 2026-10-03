@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ani_watch.domain.errors import OfflineError
 from ani_watch.domain.models import AnimeDetails, AnimeRef
 from ani_watch.metadata.anilist import AniListClient
 from ani_watch.metadata.cache import MemoryCache, RedisCache
@@ -23,16 +24,22 @@ class CachedMetadataService:
         self.cache = cache or MemoryCache()
         self.offline = offline
 
-    async def search(self, query: str) -> list[AnimeRef]:
-        key = f"search:{query.strip().lower()}"
+    async def close(self) -> None:
+        """Close the underlying metadata client."""
+        await self.client.close()
+
+    async def search(self, query: str, limit: int = 10) -> list[AnimeRef]:
+        key = f"search:{query.strip().lower()}:{limit}"
         cached = self.cache.get(key)
         if cached is not None:
             return [AnimeRef(**item) for item in cached]
 
         if self.offline:
-            return []
+            raise OfflineError(
+                "Offline mode is enabled and this search is not cached locally."
+            )
 
-        results = await self.client.search(query)
+        results = await self.client.search(query, limit=limit)
         refs = [
             AnimeRef(
                 anilist_id=int(item["id"]),
@@ -54,7 +61,9 @@ class CachedMetadataService:
             return AnimeDetails(**cached)
 
         if self.offline:
-            raise LookupError("Anime details are not cached and offline mode is enabled.")
+            raise OfflineError(
+                "Offline mode is enabled and these anime details are not cached locally."
+            )
 
         item = await self.client.details(anime_id)
         details = AnimeDetails(
