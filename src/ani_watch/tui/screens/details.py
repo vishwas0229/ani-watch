@@ -100,6 +100,7 @@ class AnimeDetailsScreen(Screen[None]):
 
     BINDINGS = [
         ("escape", "go_back", "Back"),
+        ("t", "toggle_favorite", "Favorite"),
     ]
 
     def __init__(self, anime: AnimeDetails | None = None) -> None:
@@ -246,14 +247,24 @@ class AnimeDetailsScreen(Screen[None]):
                 "Episode selection will be connected in the Episode screen issue."
             )
         elif action == "favorite":
-            self._favorite = not self._favorite
-            event.button.label = self._favorite_label()
-            state = "added to" if self._favorite else "removed from"
-            self.query_one("#details-status", Static).update(
-                f"Anime {state} favorites locally. Persistence will be added "
-                "with the library/storage features."
-            )
+            self.toggle_favorite()
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
         self.app.pop_screen()
+
+
+    def toggle_favorite(self) -> None:
+        """Toggle the selected anime's local favorite state."""
+        self._favorite = not self._favorite
+        favorite = self.query_one("#favorite", Button)
+        favorite.label = self._favorite_label()
+        state = "added to" if self._favorite else "removed from"
+        self.query_one("#details-status", Static).update(
+            f"Anime {state} favorites locally. Persistence will be added "
+            "with the library/storage features."
+        )
+
+    def action_toggle_favorite(self) -> None:
+        """Handle the t keyboard shortcut."""
+        self.toggle_favorite()
