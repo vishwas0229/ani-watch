@@ -24,7 +24,7 @@ async def test_library_screen_renders_tracking_sections() -> None:
         await app.push_screen(LibraryScreen(snapshot))
         await pilot.pause()
 
-        assert "5 watched" in str(app.screen.query_one("#library-summary").renderable)
+        assert "5 watched" in str(app.screen.query_one("#library-summary").content)
         assert "Sample Anime • Episode 6 • 25% complete" in str(
             app.screen.query_one("#continue-list").render()
         )
