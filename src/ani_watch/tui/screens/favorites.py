@@ -186,7 +186,7 @@ class FavoritesScreen(Screen[None]):
             button.remove_class("selected")
 
         self._selected_index = index
-        button = self.query_one(self._favorite_id(index), Button)
+        button = self.query_one(f"#{self._favorite_id(index)}", Button)
         button.add_class("selected")
         button.focus()
 
