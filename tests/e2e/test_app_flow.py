@@ -6,12 +6,13 @@ async def test_end_to_end_home_navigation() -> None:
 
     async with app.run_test() as pilot:
         await pilot.pause()
+        home_screen = app.screen
         await pilot.press("s")
         await pilot.pause()
         assert app.screen.__class__.__name__ == "SettingsScreen"
         await pilot.press("escape")
         await pilot.pause()
-        assert app.screen is app.base_screen
+        assert app.screen is home_screen
         await pilot.press("f")
         await pilot.pause()
         assert app.screen.__class__.__name__ == "FavoritesScreen"
