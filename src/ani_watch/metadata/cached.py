@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ani_watch.domain.models import AnimeDetails
-from ani_watch.domain.models import AnimeRef
+from ani_watch.domain.models import AnimeDetails, AnimeRef
 from ani_watch.metadata.anilist import AniListClient
 from ani_watch.metadata.cache import MemoryCache, RedisCache
 
@@ -55,7 +54,9 @@ class CachedMetadataService:
             return AnimeDetails(**cached)
 
         if self.offline:
-            raise LookupError("Anime details are not cached and offline mode is enabled.")
+            raise LookupError(
+                "Anime details are not cached and offline mode is enabled."
+            )
 
         item = await self.client.details(anime_id)
         details = AnimeDetails(
@@ -66,30 +67,41 @@ class CachedMetadataService:
             status=self._text(item.get("status")),
             episodes=self._int(item.get("episodes")),
             score=self._float(item.get("averageScore")),
-            genres=tuple(x.strip() for x in item.get("genres", []) if x and x.strip()),
+            genres=tuple(
+                x.strip()
+                for x in item.get("genres", [])
+                if x and x.strip()
+            ),
             season=self._text(item.get("season")),
             year=self._int(item.get("seasonYear")),
             format=self._text(item.get("format")),
         )
-        self.cache.set(key, details.__dict__ if hasattr(details, "__dict__") else {
-            "anilist_id": details.anilist_id,
-            "title": details.title,
-            "native_title": details.native_title,
-            "description": details.description,
-            "status": details.status,
-            "episodes": details.episodes,
-            "score": details.score,
-            "genres": details.genres,
-            "season": details.season,
-            "year": details.year,
-            "format": details.format,
-            "is_favorite": details.is_favorite,
-        })
+        self.cache.set(
+            key,
+            {
+                "anilist_id": details.anilist_id,
+                "title": details.title,
+                "native_title": details.native_title,
+                "description": details.description,
+                "status": details.status,
+                "episodes": details.episodes,
+                "score": details.score,
+                "genres": details.genres,
+                "season": details.season,
+                "year": details.year,
+                "format": details.format,
+                "is_favorite": details.is_favorite,
+            },
+        )
         return details
 
     @staticmethod
     def _title(value: Any) -> str:
-        return str((value or {}).get("english") or (value or {}).get("romaji") or "Unknown anime")
+        return (
+            str((value or {}).get("english") or "").strip()
+            or str((value or {}).get("romaji") or "").strip()
+            or "Unknown anime"
+        )
 
     @staticmethod
     def _text(value: Any) -> str | None:
