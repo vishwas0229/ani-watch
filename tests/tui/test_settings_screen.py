@@ -1,4 +1,6 @@
 from tempfile import TemporaryDirectory
+
+from textual.widgets import Button
 from pathlib import Path
 
 from ani_watch.config.store import SettingsStore
@@ -21,7 +23,9 @@ async def test_settings_screen_renders_controls() -> None:
             assert app.screen.query_one("#auto-next")
             assert app.screen.query_one("#save")
 
-            await pilot.click("#save")
+            save = app.screen.query_one("#save", Button)
+            save.focus()
+            await pilot.press("enter")
             await pilot.pause()
 
             assert "saved successfully" in str(
@@ -36,7 +40,9 @@ async def test_settings_reset_restores_defaults() -> None:
         await app.push_screen(SettingsScreen())
         await pilot.pause()
 
-        await pilot.click("#reset")
+        reset = app.screen.query_one("#reset", Button)
+        reset.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert app.screen.query_one("#theme").value == "midnight"
