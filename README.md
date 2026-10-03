@@ -29,7 +29,13 @@ Create the environment and install the development dependencies:
 uv sync --extra dev
 ```
 
-Run the CLI:
+Run the application from the repository root:
+
+```bash
+uv run python main.py
+```
+
+The repository-level `main.py` is the primary source-checkout launcher. The installable `ani-watch` console command remains available after the package is installed:
 
 ```bash
 uv run ani-watch
