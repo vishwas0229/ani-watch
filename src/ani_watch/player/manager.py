@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
-from ani_watch.config.settings import PlaybackSettings
+from ani_watch.config.settings import PlaybackSettings, ProviderSettings
 from ani_watch.domain.episode import EpisodeItem
 from ani_watch.domain.history import WatchHistoryEntry
 from ani_watch.domain.models import AnimeRef
 from ani_watch.providers.registry import ProviderRegistry
+
 from .vlc import VlcPlayer
 
 
@@ -20,10 +21,12 @@ class PlaybackManager:
         player: VlcPlayer,
         providers: ProviderRegistry,
         settings: PlaybackSettings,
+        provider_settings: ProviderSettings | None = None,
     ) -> None:
         self.player = player
         self.providers = providers
         self.settings = settings
+        self.provider_settings = provider_settings
         self.current: EpisodeItem | None = None
         self.current_anime: AnimeRef | None = None
         self._next: Callable[[], None] | None = None
@@ -38,7 +41,12 @@ class PlaybackManager:
         history: Sequence[WatchHistoryEntry] = (),
     ) -> EpisodeItem:
         """Resolve an episode and resume from matching local history."""
-        episode = await self.providers.resolve(anime, episode_number)
+        preferred = self._preferred_providers()
+        episode = await self.providers.resolve(
+            anime,
+            episode_number,
+            preferred=preferred,
+        )
         self.current = episode
         self.current_anime = anime
 
@@ -47,7 +55,7 @@ class PlaybackManager:
 
         self.player.load(
             episode.source_uri,
-            options=(f":network-caching={1000}",),
+            options=(" :network-caching=1000".strip(),),
         )
 
         resume_at = self._resume_position(history, anime.anilist_id, episode_number)
@@ -87,17 +95,21 @@ class PlaybackManager:
 
     def skip_outro(self, duration_seconds: int | None = None) -> None:
         """Skip toward the end of the configured outro window."""
-        if (
-            self.settings.skip_outro
-            and self.settings.outro_seconds
-            and duration_seconds
-        ):
+        if self.settings.skip_outro and self.settings.outro_seconds and duration_seconds:
             self.player.seek(max(0, duration_seconds - self.settings.outro_seconds))
 
     def _handle_complete(self) -> None:
         """Advance automatically when the current item finishes."""
         if self.settings.auto_next and self._next is not None:
             self._next()
+
+    def _preferred_providers(self) -> tuple[str, ...] | None:
+        if self.provider_settings is None:
+            return None
+        providers = tuple(self.provider_settings.enabled)
+        if self.settings.local_first and "local" in providers:
+            return ("local",) + tuple(name for name in providers if name != "local")
+        return providers
 
     @staticmethod
     def _resume_position(
