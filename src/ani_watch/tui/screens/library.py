@@ -83,20 +83,14 @@ class LibraryScreen(Screen[None]):
                 yield Button("Back", id="back")
 
     def _summary(self) -> str:
-        return (
-            f"{self.snapshot.watched_episodes} watched • "
-            f"{self.snapshot.favorites} favorites"
-        )
+        return f"{self.snapshot.watched_episodes} watched • {self.snapshot.favorites} favorites"
 
     @staticmethod
     def _continue_label(item: ContinueWatchingItem) -> str:
         progress = "?"
         if item.duration_seconds and item.duration_seconds > 0:
             progress = f"{round(item.position_seconds / item.duration_seconds * 100)}%"
-        return (
-            f"{item.anime_title} • Episode {item.episode_number} • "
-            f"{progress} complete"
-        )
+        return f"{item.anime_title} • Episode {item.episode_number} • {progress} complete"
 
     @staticmethod
     def _recent_label(item: RecentlyWatchedItem) -> str:

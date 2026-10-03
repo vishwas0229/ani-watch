@@ -30,21 +30,13 @@ async def test_episode_screen_renders_episode_list() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await app.push_screen(
-            EpisodeScreen("Sample Anime", sample_episodes())
-        )
+        await app.push_screen(EpisodeScreen("Sample Anime", sample_episodes()))
         await pilot.pause()
 
         assert app.screen.query_one("#anime-title").content == "Sample Anime"
-        assert app.screen.query_one("#episode-summary").content == (
-            "3 episodes • 1 watched"
-        )
-        assert "01 • The Beginning • 24m • Watched" in str(
-            app.screen.query_one("#episode-0").label
-        )
-        assert "02 • The Journey • 23m" in str(
-            app.screen.query_one("#episode-1").label
-        )
+        assert app.screen.query_one("#episode-summary").content == ("3 episodes • 1 watched")
+        assert "01 • The Beginning • 24m • Watched" in str(app.screen.query_one("#episode-0").label)
+        assert "02 • The Journey • 23m" in str(app.screen.query_one("#episode-1").label)
         assert app.screen.query_one("#episode-2").disabled
         assert app.screen.query_one("#episode-0").has_focus
 
@@ -106,9 +98,7 @@ async def test_empty_episode_screen_disables_play() -> None:
 
         assert app.screen.query_one("#episodes-empty")
         assert app.screen.query_one("#play").disabled
-        assert "0 episodes" in str(
-            app.screen.query_one("#episode-summary").content
-        )
+        assert "0 episodes" in str(app.screen.query_one("#episode-summary").content)
 
 
 async def test_episode_screen_back_button_returns_home() -> None:

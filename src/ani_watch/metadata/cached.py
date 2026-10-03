@@ -54,9 +54,7 @@ class CachedMetadataService:
             return AnimeDetails(**cached)
 
         if self.offline:
-            raise LookupError(
-                "Anime details are not cached and offline mode is enabled."
-            )
+            raise LookupError("Anime details are not cached and offline mode is enabled.")
 
         item = await self.client.details(anime_id)
         details = AnimeDetails(
@@ -67,11 +65,7 @@ class CachedMetadataService:
             status=self._text(item.get("status")),
             episodes=self._int(item.get("episodes")),
             score=self._float(item.get("averageScore")),
-            genres=tuple(
-                x.strip()
-                for x in item.get("genres", [])
-                if x and x.strip()
-            ),
+            genres=tuple(x.strip() for x in item.get("genres", []) if x and x.strip()),
             season=self._text(item.get("season")),
             year=self._int(item.get("seasonYear")),
             format=self._text(item.get("format")),

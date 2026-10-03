@@ -82,12 +82,8 @@ class LibraryService:
 
     def statistics(self) -> dict[str, int]:
         with self.db.session() as session:
-            watched = session.scalar(
-                select(func.count(HistoryRecord.id))
-            ) or 0
-            favorites = session.scalar(
-                select(func.count()).select_from(FavoriteRecord)
-            ) or 0
+            watched = session.scalar(select(func.count(HistoryRecord.id))) or 0
+            favorites = session.scalar(select(func.count()).select_from(FavoriteRecord)) or 0
         return {
             "watched_episodes": int(watched),
             "favorites": int(favorites),

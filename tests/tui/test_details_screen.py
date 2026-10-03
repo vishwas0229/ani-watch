@@ -27,9 +27,7 @@ async def test_details_screen_renders_metadata() -> None:
         await pilot.pause()
 
         assert app.screen.query_one("#details-title").content == "Sample Anime"
-        assert app.screen.query_one("#details-native-title").content == (
-            "サンプルアニメ"
-        )
+        assert app.screen.query_one("#details-native-title").content == ("サンプルアニメ")
         assert app.screen.query_one("#details-episodes-value").content == "24"
         assert app.screen.query_one("#details-score-value").content == "91.4/100"
         assert app.screen.query_one("#details-season-value").content == "FALL 2023"
@@ -62,9 +60,7 @@ async def test_favorite_action_toggles_local_state() -> None:
 
         await pilot.press("t")
         assert str(favorite.label) == "Unfavorite"
-        assert "added to favorites locally" in str(
-            app.screen.query_one("#details-status").content
-        )
+        assert "added to favorites locally" in str(app.screen.query_one("#details-status").content)
 
         await pilot.press("t")
         assert str(favorite.label) == "Favorite"

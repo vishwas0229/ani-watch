@@ -76,13 +76,9 @@ class SearchScreen(Screen[None]):
     def submit_search(self) -> None:
         query = self.query_one("#search-input", Input).value.strip()
         if not query:
-            self.query_one("#search-status", Static).update(
-                "Enter an anime title to search."
-            )
+            self.query_one("#search-status", Static).update("Enter an anime title to search.")
             return
-        self.query_one("#search-status", Static).update(
-            f'Searching AniList for "{query}"…'
-        )
+        self.query_one("#search-status", Static).update(f'Searching AniList for "{query}"…')
         self.run_worker(self._perform_search(query), exclusive=True)
 
     async def _perform_search(self, query: str) -> None:

@@ -28,9 +28,7 @@ async def test_settings_screen_renders_controls() -> None:
             await pilot.press("enter")
             await pilot.pause()
 
-            assert "saved successfully" in str(
-                app.screen.query_one("#settings-status").content
-            )
+            assert "saved successfully" in str(app.screen.query_one("#settings-status").content)
 
 
 async def test_settings_reset_restores_defaults() -> None:

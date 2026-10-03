@@ -68,10 +68,7 @@ class ProviderHealth:
         )["failures"] += 1
 
     def snapshot(self) -> dict[str, dict[str, int]]:
-        return {
-            name: values.copy()
-            for name, values in self._stats.items()
-        }
+        return {name: values.copy() for name, values in self._stats.items()}
 
 
 class ProviderResolver:

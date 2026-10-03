@@ -1,6 +1,6 @@
 """Initial Ani-Watch schema."""
 
-import sqlalchemy as sa
+import sqlalchemy as sa  # noqa: I001
 from alembic import op
 
 

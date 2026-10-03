@@ -164,18 +164,13 @@ class HistoryScreen(Screen[None]):
             if entry.episode_title
             else f"Episode {entry.episode_number}"
         )
-        progress = HistoryScreen._progress_label(
-            entry.progress_seconds, entry.duration_seconds
-        )
+        progress = HistoryScreen._progress_label(entry.progress_seconds, entry.duration_seconds)
         watched_at = (
             entry.watched_at.strftime("%Y-%m-%d %H:%M")
             if entry.watched_at is not None
             else "time unavailable"
         )
-        return (
-            f"{entry.anime_title} • {episode_title} • {progress} "
-            f"• {watched_at}"
-        )
+        return f"{entry.anime_title} • {episode_title} • {progress} • {watched_at}"
 
     @staticmethod
     def _progress_label(progress: int, duration: int | None) -> str:
@@ -221,9 +216,7 @@ class HistoryScreen(Screen[None]):
         """Move within the history list and clamp at its edges."""
         if not self.entries:
             return
-        candidate = max(
-            0, min(self._selected_index + step, len(self.entries) - 1)
-        )
+        candidate = max(0, min(self._selected_index + step, len(self.entries) - 1))
         self._select_index(candidate)
 
     def next_entry(self) -> None:
@@ -237,9 +230,7 @@ class HistoryScreen(Screen[None]):
     def resume_selected(self) -> None:
         """Prepare playback resume without coupling to the player adapter."""
         if not self.entries:
-            self.query_one("#history-status", Static).update(
-                "There is no history entry to resume."
-            )
+            self.query_one("#history-status", Static).update("There is no history entry to resume.")
             return
 
         entry = self.entries[self._selected_index]

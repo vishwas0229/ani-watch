@@ -1,6 +1,6 @@
 """Lightweight schema migration manager."""
 
-from sqlalchemy import Column, Integer, MetaData, Table, insert, select
+import sqlalchemy as sa  # noqa: I001
 
 from ani_watch.storage.models import Base
 
@@ -10,28 +10,22 @@ MIGRATION_VERSION = 1
 
 def upgrade(engine) -> None:
     """Create the current schema and record its version."""
-    metadata = MetaData()
-    version_table = Table(
+    metadata = sa.MetaData()
+    version_table = sa.Table(
         "schema_version",
         metadata,
-        Column("version", Integer, primary_key=True),
+        sa.Column("version", sa.Integer, primary_key=True),
     )
     metadata.create_all(engine)
 
     with engine.begin() as connection:
         current = connection.execute(
-            select(version_table.c.version).limit(1)
+            sa.select(version_table.c.version).limit(1)
         ).scalar_one_or_none()
 
         if current is None:
             Base.metadata.create_all(engine)
-            connection.execute(
-                insert(version_table).values(version=MIGRATION_VERSION)
-            )
+            connection.execute(sa.insert(version_table).values(version=MIGRATION_VERSION))
         elif current < MIGRATION_VERSION:
             Base.metadata.create_all(engine)
-            connection.execute(
-                version_table.update().values(
-                    version=MIGRATION_VERSION
-                )
-            )
+            connection.execute(version_table.update().values(version=MIGRATION_VERSION))

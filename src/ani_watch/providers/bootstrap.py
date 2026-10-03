@@ -18,9 +18,7 @@ def build_provider_registry(settings: AppSettings) -> ProviderRegistry:
     if settings.local_media_root:
         root = Path(settings.local_media_root)
         if not root.exists():
-            raise ConfigurationError(
-                "Configured local media root does not exist."
-            )
+            raise ConfigurationError("Configured local media root does not exist.")
         registry.register(LocalFileProvider(root))
 
     return registry

@@ -33,9 +33,7 @@ async def test_history_screen_renders_entries() -> None:
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
 
-        assert app.screen.query_one("#history-summary").content == (
-            "2 watched episodes"
-        )
+        assert app.screen.query_one("#history-summary").content == ("2 watched episodes")
         assert "Sample Anime • The Turning Point • 50%" in str(
             app.screen.query_one("#history-0").label
         )
@@ -86,9 +84,7 @@ async def test_empty_history_disables_resume() -> None:
 
         assert app.screen.query_one("#history-empty")
         assert app.screen.query_one("#resume").disabled
-        assert app.screen.query_one("#history-summary").content == (
-            "0 watched episodes"
-        )
+        assert app.screen.query_one("#history-summary").content == ("0 watched episodes")
 
 
 async def test_history_screen_back_and_escape() -> None:

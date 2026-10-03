@@ -46,6 +46,7 @@ query ($id: Int!) {
 }
 """
 
+
 class AniListClient:
     """Small async client around the public AniList GraphQL endpoint."""
 
@@ -104,16 +105,12 @@ class AniListClient:
 
                 if response.status_code >= 500:
                     if attempt >= self._retries:
-                        raise MetadataError(
-                            f"AniList server error: HTTP {response.status_code}"
-                        )
+                        raise MetadataError(f"AniList server error: HTTP {response.status_code}")
                     await asyncio.sleep(2**attempt)
                     continue
 
                 if response.status_code >= 400:
-                    raise MetadataError(
-                        f"AniList request rejected: HTTP {response.status_code}"
-                    )
+                    raise MetadataError(f"AniList request rejected: HTTP {response.status_code}")
 
                 payload = response.json()
                 if payload.get("errors"):
