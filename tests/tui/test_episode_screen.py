@@ -1,4 +1,4 @@
-from ani_watch.domain.episode import EpisodeItem
+from ani_watch.domain.models import EpisodeItem
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
 
