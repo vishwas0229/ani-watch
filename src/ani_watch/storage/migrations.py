@@ -14,7 +14,7 @@ def upgrade(engine) -> None:
     version_table = sa.Table(
         "schema_version",
         metadata,
-        sa.Column("version", Integer, primary_key=True),
+        sa.Column("version", sa.Integer, primary_key=True),
     )
     metadata.create_all(engine)
 
