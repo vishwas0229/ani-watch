@@ -1,7 +1,7 @@
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from textual.widgets import Button
-from pathlib import Path
 
 from ani_watch.config.store import SettingsStore
 from ani_watch.tui.app import AniWatchApp
