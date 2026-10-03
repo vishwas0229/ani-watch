@@ -67,6 +67,8 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
 
+        resume = app.screen.query_one("#resume")
+        resume.focus()
         await pilot.press("enter")
         await pilot.pause()
 
