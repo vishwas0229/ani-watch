@@ -1,5 +1,7 @@
 """Episode selection screen for Ani-Watch."""
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 
 from textual.app import ComposeResult
@@ -8,6 +10,9 @@ from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
 from ani_watch.domain.episode import EpisodeItem
+from ani_watch.domain.models import AnimeRef
+from ani_watch.player.manager import PlaybackManager
+from ani_watch.tui.screens.player import PlayerScreen
 
 
 class EpisodeScreen(Screen[None]):
@@ -89,10 +94,15 @@ class EpisodeScreen(Screen[None]):
         self,
         anime_title: str,
         episodes: Sequence[EpisodeItem] = (),
+        *,
+        anime_id: int | None = None,
+        playback_manager: PlaybackManager | None = None,
     ) -> None:
         super().__init__()
         self.anime_title = anime_title.strip() or "Unknown anime"
         self.episodes = tuple(episodes)
+        self.anime_id = anime_id
+        self.playback_manager = playback_manager
         self._selected_index = 0
 
     def compose(self) -> ComposeResult:
@@ -173,12 +183,10 @@ class EpisodeScreen(Screen[None]):
 
     @staticmethod
     def _episode_id(index: int) -> str:
-        """Return a stable widget ID for one episode row."""
         return f"episode-{index}"
 
     @staticmethod
     def _episode_label(episode: EpisodeItem) -> str:
-        """Format the visible episode row."""
         title = episode.title.strip() if episode.title else f"Episode {episode.number}"
         duration = (
             f" • {episode.duration_minutes}m"
@@ -192,7 +200,6 @@ class EpisodeScreen(Screen[None]):
 
     @staticmethod
     def _episode_classes(index: int, episode: EpisodeItem) -> str:
-        """Return display classes for an episode row."""
         classes = ["episode-item"]
         if index == 0:
             classes.append("selected")
@@ -203,7 +210,6 @@ class EpisodeScreen(Screen[None]):
         return " ".join(classes)
 
     def _select_index(self, index: int) -> None:
-        """Select an episode and keep focus aligned with the selection."""
         if not self.episodes or not 0 <= index < len(self.episodes):
             return
 
@@ -222,12 +228,10 @@ class EpisodeScreen(Screen[None]):
         )
 
     def _clear_selection_classes(self) -> None:
-        """Remove the selected marker from all episode buttons."""
         for button in self.query(".episode-item.selected"):
             button.remove_class("selected")
 
     def _focus_selected(self) -> None:
-        """Focus the selected episode button when it is available."""
         if not self.episodes:
             return
         button = self.query_one(self._episode_id(self._selected_index), Button)
@@ -235,13 +239,12 @@ class EpisodeScreen(Screen[None]):
             button.focus()
 
     def _move_selection(self, step: int) -> None:
-        """Move selection without leaving the available episode range."""
         if not self.episodes:
             return
 
-        candidate = self._selected_index + step
-        candidate = max(0, min(candidate, len(self.episodes) - 1))
-
+        candidate = max(
+            0, min(self._selected_index + step, len(self.episodes) - 1)
+        )
         if self.episodes[candidate].available:
             self._select_index(candidate)
             return
@@ -254,15 +257,13 @@ class EpisodeScreen(Screen[None]):
             candidate += direction
 
     def next_episode(self) -> None:
-        """Select the next available episode."""
         self._move_selection(1)
 
     def previous_episode(self) -> None:
-        """Select the previous available episode."""
         self._move_selection(-1)
 
     def play_selected(self) -> None:
-        """Prepare playback handoff without coupling to the player layer."""
+        """Resolve/play the selected source when a manager is supplied."""
         if not self.episodes:
             self.query_one("#episode-status", Static).update(
                 "No episode is available to play yet."
@@ -276,23 +277,46 @@ class EpisodeScreen(Screen[None]):
             )
             return
 
-        self.query_one("#episode-status", Static).update(
-            f"Playback requested for Episode {episode.number}. "
-            "VLC integration will be connected in the playback phase."
+        if self.playback_manager is None or self.anime_id is None:
+            self.query_one("#episode-status", Static).update(
+                f"Playback requested for Episode {episode.number}. "
+                "Attach a playback manager and configured provider to start VLC."
+            )
+            return
+
+        self.app.run_worker(
+            self._start_playback(episode),
+            group="playback",
+            exclusive=True,
+            exit_on_error=False,
         )
 
+    async def _start_playback(self, episode: EpisodeItem) -> None:
+        """Start playback and open the player control screen."""
+        try:
+            await self.playback_manager.play(
+                AnimeRef(self.anime_id or 0, self.anime_title),
+                episode.number,
+            )
+        except Exception as exc:
+            self.query_one("#episode-status", Static).update(
+                f"Playback failed: {exc}"
+            )
+            return
+
+        self.query_one("#episode-status", Static).update(
+            f"Playing Episode {episode.number}."
+        )
+        self.app.push_screen(PlayerScreen(self.playback_manager))
+
     def action_go_back(self) -> None:
-        """Return to the previous screen."""
         self.app.pop_screen()
 
     def action_next_episode(self) -> None:
-        """Handle j keyboard navigation."""
         self.next_episode()
 
     def action_previous_episode(self) -> None:
-        """Handle k keyboard navigation."""
         self.previous_episode()
 
     def action_play_selected(self) -> None:
-        """Handle Space playback handoff."""
         self.play_selected()
