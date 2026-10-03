@@ -1,6 +1,8 @@
 """Anime details screen for Ani-Watch."""
 
-from collections.abc import Iterable
+from __future__ import annotations
+
+from collections.abc import Sequence
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -8,6 +10,9 @@ from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
 from ani_watch.domain.details import AnimeDetails
+from ani_watch.metadata.client import AniListClient
+from ani_watch.metadata.service import AniListMetadataService
+from ani_watch.tui.screens.episodes import EpisodeScreen
 
 
 class AnimeDetailsScreen(Screen[None]):
@@ -94,13 +99,16 @@ class AnimeDetailsScreen(Screen[None]):
     }
     """
 
-    BINDINGS = [
-        ("escape", "go_back", "Back"),
-    ]
+    BINDINGS = [("escape", "go_back", "Back")]
 
-    def __init__(self, anime: AnimeDetails | None = None) -> None:
+    def __init__(
+        self,
+        anime: AnimeDetails | None = None,
+        service: AniListMetadataService | None = None,
+    ) -> None:
         super().__init__()
         self.anime = anime
+        self.service = service
         self._favorite = anime.is_favorite if anime is not None else False
 
     def compose(self) -> ComposeResult:
@@ -120,10 +128,7 @@ class AnimeDetailsScreen(Screen[None]):
                     id="details-description",
                 )
                 yield Static("Genres: Not available", id="details-genres")
-                yield Static(
-                    "Waiting for an anime selection.",
-                    id="details-status",
-                )
+                yield Static("Waiting for an anime selection.", id="details-status")
             else:
                 yield Label(self.anime.title, id="details-title")
                 yield Static(
@@ -185,12 +190,7 @@ class AnimeDetailsScreen(Screen[None]):
                 )
                 yield Button("Back", id="back")
 
-    def _meta_row(
-        self,
-        label: str,
-        value: str,
-        widget_id: str,
-    ) -> Iterable[Horizontal]:
+    def _meta_row(self, label: str, value: str, widget_id: str) -> ComposeResult:
         """Build one metadata label/value row."""
         with Horizontal(classes="detail-row"):
             yield Label(label, classes="detail-label")
@@ -198,22 +198,18 @@ class AnimeDetailsScreen(Screen[None]):
 
     @staticmethod
     def _value(value: str | None, fallback: str = "Not available") -> str:
-        """Return a human-readable fallback for missing text."""
         return value.strip() if value and value.strip() else fallback
 
     @staticmethod
     def _number(value: int | None) -> str:
-        """Format an optional integer."""
         return str(value) if value is not None else "Not available"
 
     @staticmethod
     def _score(value: float | None) -> str:
-        """Format an optional score without inventing one."""
         return f"{value:.1f}/100" if value is not None else "Not available"
 
     @staticmethod
     def _season(season: str | None, year: int | None) -> str:
-        """Format season and year when available."""
         parts = [
             part
             for part in (season, str(year) if year is not None else None)
@@ -222,33 +218,62 @@ class AnimeDetailsScreen(Screen[None]):
         return " ".join(parts) if parts else "Not available"
 
     @staticmethod
-    def _genres(genres: tuple[str, ...]) -> str:
-        """Format a genre list while keeping empty metadata explicit."""
+    def _genres(genres: Sequence[str]) -> str:
         values = tuple(genre.strip() for genre in genres if genre.strip())
         return ", ".join(values) if values else "Not available"
 
     def _favorite_label(self) -> str:
-        """Return the current local favorite action label."""
         return "Unfavorite" if self._favorite else "Favorite"
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle details actions."""
         action = event.button.id
-
         if action == "back":
             self.app.pop_screen()
-        elif action == "episodes":
-            self.notify(
-                "Episode selection will be connected in the Episode screen issue."
-            )
         elif action == "favorite":
             self._favorite = not self._favorite
             event.button.label = self._favorite_label()
             state = "added to" if self._favorite else "removed from"
             self.query_one("#details-status", Static).update(
-                f"Anime {state} favorites locally. Persistence will be added "
-                "with the library/storage features."
+                f"Anime {state} favorites locally."
             )
+        elif action == "episodes" and self.anime is not None:
+            self.app.run_worker(
+                self._open_episodes(),
+                group="episode-metadata",
+                exclusive=True,
+                exit_on_error=False,
+            )
+
+    async def _open_episodes(self) -> None:
+        service = self.service or self._default_service()
+        try:
+            episodes = await service.episodes(self.anime.anilist_id)
+        except Exception as exc:
+            self.query_one("#details-status", Static).update(
+                f"Unable to load episode metadata: {exc}"
+            )
+            return
+
+        self.app.push_screen(
+            EpisodeScreen(
+                self.anime.title,
+                episodes,
+            )
+        )
+
+    @staticmethod
+    def _default_service() -> AniListMetadataService:
+        from ani_watch.auth.anilist import TokenStore
+        from ani_watch.config.store import SettingsStore
+
+        settings = SettingsStore().load()
+        client = AniListClient(
+            url=settings.anilist.graphql_url,
+            access_token=TokenStore().load(),
+            timeout=settings.providers.timeout_seconds,
+        )
+        return AniListMetadataService(client)
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
