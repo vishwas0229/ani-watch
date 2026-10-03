@@ -198,6 +198,7 @@ class SettingsScreen(Screen[None]):
                     ),
                 }
             )
+            settings = AppSettings.model_validate(settings.model_dump())
             self.store.save(settings)
         except (TypeError, ValueError):
             self.query_one("#settings-status", Static).update(
