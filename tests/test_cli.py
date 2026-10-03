@@ -11,7 +11,7 @@ def test_cli_doctor_requires_conda(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CONDA_PREFIX", raising=False)
     result = CliRunner().invoke(app, ["doctor"])
     assert result.exit_code != 0
-    assert "active Conda environment" in result.stdout
+    assert "active Conda environment" in result.output
 
 
 def test_cli_doctor_in_conda(monkeypatch: pytest.MonkeyPatch) -> None:
