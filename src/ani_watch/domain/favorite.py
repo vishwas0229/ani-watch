@@ -14,3 +14,4 @@ class FavoriteAnime:
     episodes: int | None = None
     score: float | None = None
     genres: tuple[str, ...] = ()
+    cover_url: str | None = None
