@@ -1,13 +1,15 @@
-"""Textual application shell and home dashboard for Ani-Watch."""
+"""Textual application shell and primary navigation for Ani-Watch."""
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Button, Footer, Header, Label, Static
 
 from ani_watch import __version__
+from ani_watch.config.store import SettingsStore
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.search import SearchScreen
+from ani_watch.tui.screens.settings import SettingsScreen
 
 
 class AniWatchApp(App[None]):
@@ -17,65 +19,45 @@ class AniWatchApp(App[None]):
     SUB_TITLE = f"v{__version__}"
 
     CSS = """
-    Screen {
-        layout: vertical;
-    }
+    Screen { layout: vertical; }
 
-    #welcome {
-        height: auto;
-        padding: 1 2;
-        margin: 1 2;
-        border: round $primary;
-    }
-
-    #welcome-title {
-        text-style: bold;
-        color: $accent;
-    }
-
-    #home-content {
-        height: 1fr;
-        padding: 0 2;
-    }
-
-    .section-title {
-        text-style: bold;
-        color: $accent;
-        margin: 1 0;
-    }
-
-    #home-columns {
-        height: 1fr;
-    }
-
+    #welcome { height: auto; padding: 1 2; margin: 1 2; border: round $primary; }
+    #welcome-title { text-style: bold; color: $accent; }
+    #home-content { height: 1fr; padding: 0 2; }
+    .section-title { text-style: bold; color: $accent; margin: 1 0; }
+    #home-columns { height: 1fr; }
     .home-panel {
-        width: 1fr;
-        height: 1fr;
-        border: round $secondary;
-        padding: 1 2;
-        margin: 0 1 1 0;
+        width: 1fr; height: 1fr; border: round $secondary;
+        padding: 1 2; margin: 0 1 1 0;
     }
-
-    .home-copy {
-        height: auto;
-        margin-bottom: 1;
-    }
-
+    .home-copy { height: auto; margin-bottom: 1; }
     #home-actions {
-        height: auto;
-        padding: 0 2;
-        margin-bottom: 1;
-        align-horizontal: center;
+        height: auto; padding: 0 2; margin-bottom: 1; align-horizontal: center;
+    }
+    #home-actions Button { margin: 0 1; }
+    #home-status { height: auto; padding: 0 2; color: $text-muted; }
+
+    .theme-mono Screen { background: #101010; color: #e8e8e8; }
+    .theme-high-contrast Screen { background: #000000; color: #ffffff; }
+    .theme-high-contrast .section-title,
+    .theme-high-contrast #welcome-title {
+        color: #ffffff; text-style: bold;
     }
 
-    #home-actions Button {
-        margin: 0 1;
+    @media (max-width: 72) {
+        #home-columns { layout: vertical; overflow-y: auto; }
+        .home-panel {
+            width: 1fr; height: auto; min-height: 8; margin: 0 0 1 0; padding: 1;
+        }
+        #welcome, #home-content {
+            margin-left: 1; margin-right: 1; padding-left: 1; padding-right: 1;
+        }
+        #home-actions { align-horizontal: left; overflow-x: auto; }
     }
 
-    #home-status {
-        height: auto;
-        padding: 0 2;
-        color: $text-muted;
+    @media (max-width: 52) {
+        #home-actions { layout: vertical; }
+        #home-actions Button { width: 1fr; margin-bottom: 1; }
     }
     """
 
@@ -86,10 +68,17 @@ class AniWatchApp(App[None]):
         ("/", "show_search", "Search"),
         ("r", "show_history", "History"),
         ("f", "show_favorites", "Favorites"),
+        ("s", "show_settings", "Settings"),
     ]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.settings = SettingsStore().load()
+
+    def on_mount(self) -> None:
+        self.apply_theme(self.settings.ui.theme)
+
     def compose(self) -> ComposeResult:
-        """Render the home dashboard and primary navigation."""
         yield Header(show_clock=True)
         with Vertical(id="welcome"):
             yield Label("ANI-WATCH", id="welcome-title")
@@ -105,8 +94,7 @@ class AniWatchApp(App[None]):
                     yield Static(
                         "Your in-progress anime will appear here once tracking "
                         "and PostgreSQL persistence are connected.",
-                        classes="home-copy",
-                        id="continue-watching",
+                        classes="home-copy", id="continue-watching",
                     )
                 with Vertical(classes="home-panel"):
                     yield Label("Discover", classes="section-title")
@@ -126,17 +114,20 @@ class AniWatchApp(App[None]):
             yield Button("Search", id="search", variant="primary")
             yield Button("History", id="history")
             yield Button("Favorites", id="favorites")
-            yield Button("Library", id="library")
             yield Button("Settings", id="settings")
             yield Button("Quit", id="quit")
         yield Static(
-            "Ready • Use Tab to navigate, / search, r history, f favorites, q quit.",
+            "Ready • Tab navigate • / search • r history • f favorites • s settings • q quit",
             id="home-status",
         )
         yield Footer()
 
+    def apply_theme(self, theme: str) -> None:
+        for name in ("midnight", "mono", "high-contrast"):
+            self.remove_class(f"theme-{name}")
+        self.add_class(f"theme-{theme}")
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle home dashboard navigation actions."""
         action = event.button.id
         if action == "quit":
             self.exit()
@@ -146,27 +137,25 @@ class AniWatchApp(App[None]):
             self.push_screen(HistoryScreen())
         elif action == "favorites":
             self.push_screen(FavoritesScreen())
-        elif action == "library":
-            self.notify("Library screen will be connected in a later issue.")
         elif action == "settings":
-            self.notify("Settings screen will be connected in a later issue.")
+            self.push_screen(SettingsScreen(settings=self.settings, store=SettingsStore()))
 
     def action_show_search(self) -> None:
-        """Open the anime search screen."""
         self.push_screen(SearchScreen())
 
     def action_show_history(self) -> None:
-        """Open the watch history screen."""
         self.push_screen(HistoryScreen())
 
     def action_show_favorites(self) -> None:
-        """Open the favorites screen."""
         self.push_screen(FavoritesScreen())
 
+    def action_show_settings(self) -> None:
+        self.push_screen(SettingsScreen(settings=self.settings, store=SettingsStore()))
+
     def action_show_home(self) -> None:
-        """Return to the home dashboard."""
         self.notify("You are already on Home.")
 
     def action_help(self) -> None:
-        """Show the current keyboard shortcuts."""
-        self.notify("Tab: navigate • /: Search • r: History • f: Favorites • q: Quit")
+        self.notify(
+            "Tab: navigate • /: Search • r: History • f: Favorites • s: Settings • q: Quit"
+        )
