@@ -25,7 +25,7 @@ async def test_settings_screen_renders_controls() -> None:
             await pilot.pause()
 
             assert "saved successfully" in str(
-                app.screen.query_one("#settings-status").renderable
+                app.screen.query_one("#settings-status").content
             )
 
 
