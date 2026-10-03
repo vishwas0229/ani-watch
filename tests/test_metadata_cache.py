@@ -1,6 +1,6 @@
 from ani_watch.domain.errors import OfflineError
-from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.metadata.cache import MemoryCache
+from ani_watch.metadata.cached import CachedMetadataService
 
 
 class FakeMetadataClient:
