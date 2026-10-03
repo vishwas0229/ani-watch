@@ -61,6 +61,12 @@ class VlcPlayer:
     def is_playing(self) -> bool:
         return bool(self._player.is_playing())
 
+    def is_complete(self) -> bool:
+        """Return true when VLC has reached the end of the loaded media."""
+        length = self.get_length()
+        position = self.get_time()
+        return length > 0 and position >= length and not self.is_playing()
+
     def state(self):
         return self._player.get_state()
 
