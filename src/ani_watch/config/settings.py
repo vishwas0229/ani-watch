@@ -1,15 +1,22 @@
 """Typed application configuration."""
 
 from pathlib import Path
+from typing import Literal
 
 from platformdirs import user_data_path
 from pydantic import BaseModel, Field
 
+QualityMode = Literal["1080p", "720p", "480p", "auto"]
+AudioMode = Literal["default"]
+SubtitleMode = Literal["default"]
+UITheme = Literal["midnight", "mono", "high-contrast"]
+UIDensity = Literal["compact", "normal", "comfortable"]
+
 
 class PlaybackSettings(BaseModel):
-    quality: str = "1080p"
-    audio: str = "default"
-    subtitle: str = "default"
+    quality: QualityMode = "1080p"
+    audio: AudioMode = "default"
+    subtitle: SubtitleMode = "default"
     auto_next: bool = True
     skip_intro: bool = False
     skip_outro: bool = False
@@ -18,8 +25,8 @@ class PlaybackSettings(BaseModel):
 
 
 class UISettings(BaseModel):
-    theme: str = "midnight"
-    density: str = "normal"
+    theme: UITheme = "midnight"
+    density: UIDensity = "normal"
     responsive: bool = True
 
 
