@@ -1,20 +1,85 @@
 # Ani-Watch Architecture
 
-## Layering
+## Layers
 
-Ani-Watch is structured around explicit package boundaries:
+Ani-Watch uses explicit package boundaries:
 
-- **domain** — framework-independent application concepts and value objects.
-- **services** — application orchestration and dependency-inversion contracts.
-- **metadata** — external anime metadata integrations such as AniList.
-- **storage** — persistence and repository adapters.
-- **player** — media-player adapters such as VLC/libVLC.
-- **providers** — content-source/provider and resolver adapters.
-- **tui** — Textual presentation layer.
-- **infra** — cross-cutting infrastructure integrations.
+- **domain** — provider-independent models such as anime details, episodes, favorites, and watch history.
+- **services** — orchestration contracts and library/playback workflows.
+- **metadata** — AniList GraphQL client, metadata mapping, and cache-aware access.
+- **storage** — SQLAlchemy ORM, PostgreSQL repositories, and Alembic migrations.
+- **player** — VLC/libVLC adapter and playback intelligence.
+- **providers** — source adapters, registry, resolver behavior, health checks, fallback, and circuit breakers.
+- **auth** — AniList OAuth and local token lifecycle.
+- **cache** — optional Redis adapter.
+- **tui** — Textual presentation and keyboard navigation.
+- **infra** — logging and reliability primitives.
+- **cli** — terminal commands for TUI launch, database migration, search, authentication, and sync.
 
-The dependency direction is intentionally kept inward:
+## Dependency direction
 
-`tui / cli → services → domain`
+```text
+TUI / CLI
+    |
+    v
+Application Services
+    |
+    v
+Domain
+    ^
+    |
+Adapters / Infrastructure
+  +-- Metadata (AniList)
+  +-- Storage (PostgreSQL)
+  +-- Player (VLC/libVLC)
+  +-- Providers
+  +-- Cache (Redis)
+  +-- Auth
+```
 
-External integrations should be accessed through service contracts or adapter boundaries rather than leaking infrastructure details into the domain.
+The domain never imports a provider, database, network client, or player library.
+
+## Runtime data flow
+
+### Metadata
+
+```text
+SearchScreen
+   -> MetadataService
+      -> AniListClient
+         -> GraphQL endpoint
+```
+
+The client implements timeout, retry, and HTTP 429 handling. Cache-aware access can serve previously stored metadata when the external API is unavailable.
+
+### Library
+
+```text
+TUI
+  -> LibraryService
+     -> Repository
+        -> SQLAlchemy
+           -> PostgreSQL
+```
+
+Favorites, episodes, watch history, playback progress, and settings are persisted locally.
+
+### Playback
+
+```text
+Episode selection
+   -> ProviderRegistry
+      -> EpisodeProvider
+         -> EpisodeItem(source_uri)
+   -> PlaybackManager
+      -> VlcPlayer
+         -> libVLC
+```
+
+Provider failures are isolated by circuit breakers. Playback intelligence handles resume position, automatic next-episode callbacks, local-first resolution, recovery, and configurable intro/outro skip hooks.
+
+## Configuration
+
+Configuration is validated with Pydantic and persisted as TOML. Secrets used for AniList OAuth are stored separately from normal settings with restrictive POSIX permissions.
+
+The repository ships one Conda environment definition so development is reproducible without depending on an individual developer's environment name.
