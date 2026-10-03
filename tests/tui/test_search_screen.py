@@ -1,7 +1,6 @@
 import pytest
 
-from ani_watch.domain.models import AnimeDetails
-from ani_watch.domain.models import AnimeRef
+from ani_watch.domain.models import AnimeDetails, AnimeRef
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 from ani_watch.tui.screens.search import SearchScreen
@@ -53,7 +52,7 @@ async def test_search_screen_validates_empty_query() -> None:
         await pilot.press("enter")
         status = app.screen.query_one("#search-status")
 
-        assert "Enter an anime title" in str(status.renderable)
+        assert "Enter an anime title" in str(status.content)
 
 
 async def test_search_screen_renders_provider_results(fake_service) -> None:
@@ -70,7 +69,7 @@ async def test_search_screen_renders_provider_results(fake_service) -> None:
 
         assert app.screen.query_one("#result-0").label == "Frieren"
         assert "Found 1 anime" in str(
-            app.screen.query_one("#search-status").renderable
+            app.screen.query_one("#search-status").content
         )
 
 
@@ -90,7 +89,7 @@ async def test_search_result_opens_details(fake_service) -> None:
         await pilot.pause()
 
         assert isinstance(app.screen, AnimeDetailsScreen)
-        assert app.screen.query_one("#details-title").renderable == "Sample Anime"
+        assert app.screen.query_one("#details-title").content == "Sample Anime"
 
 
 async def test_search_screen_back_button_returns_home() -> None:
