@@ -1,5 +1,7 @@
 """Unified library dashboard for Ani-Watch."""
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 
 from textual.app import ComposeResult
@@ -9,6 +11,8 @@ from textual.widgets import Button, Label, Static
 
 from ani_watch.domain.favorite import FavoriteAnime
 from ani_watch.domain.history import WatchHistoryEntry
+from ani_watch.storage.db import Database
+from ani_watch.storage.service import LibraryService
 
 
 class LibraryScreen(Screen[None]):
@@ -60,6 +64,17 @@ class LibraryScreen(Screen[None]):
     #library-actions Button {
         margin: 0 1;
     }
+
+    @media (max-width: 90) {
+        #library-grid {
+            height: auto;
+        }
+
+        .library-panel {
+            height: auto;
+            min-height: 7;
+        }
+    }
     """
 
     BINDINGS = [("escape", "go_back", "Back")]
@@ -68,10 +83,12 @@ class LibraryScreen(Screen[None]):
         self,
         history: Sequence[WatchHistoryEntry] = (),
         favorites: Sequence[FavoriteAnime] = (),
+        service: LibraryService | None = None,
     ) -> None:
         super().__init__()
         self.history = tuple(history)
         self.favorites = tuple(favorites)
+        self.service = service
 
     def compose(self) -> ComposeResult:
         with Vertical(id="library-page"):
@@ -89,10 +106,79 @@ class LibraryScreen(Screen[None]):
                 with Vertical(classes="library-panel"):
                     yield Label("Statistics", classes="library-title")
                     yield Static(self._statistics(), id="library-statistics")
-            yield Static("Local library data will be backed by PostgreSQL when configured.", id="library-status")
+            yield Static(
+                "Loading local library data…",
+                id="library-status",
+            )
             with Horizontal(id="library-actions"):
                 yield Button("Refresh", id="refresh")
                 yield Button("Back", id="back")
+
+    def on_mount(self) -> None:
+        """Load persisted library data in a worker."""
+        self.refresh()
+
+    def refresh(self) -> None:
+        """Refresh data from PostgreSQL without blocking the TUI."""
+        self.app.run_worker(
+            self._refresh_from_storage(),
+            group="library",
+            exclusive=True,
+            exit_on_error=False,
+        )
+
+    async def _refresh_from_storage(self) -> None:
+        """Read local library state and recompose the dashboard."""
+        if self.service is None:
+            try:
+                from ani_watch.config.store import SettingsStore
+
+                settings = SettingsStore().load()
+                self.service = LibraryService(Database(settings.database))
+            except Exception as exc:
+                self.query_one("#library-status", Static).update(
+                    f"Library configuration unavailable: {exc}"
+                )
+                return
+
+        try:
+            history = await self.app.run_in_thread(self.service.history)
+        except AttributeError:
+            try:
+                history = self.service.history()
+            except Exception as exc:
+                self.query_one("#library-status", Static).update(
+                    f"Library data unavailable: {exc}"
+                )
+                return
+        except Exception as exc:
+            self.query_one("#library-status", Static).update(
+                f"Library data unavailable: {exc}"
+            )
+            return
+
+        try:
+            favorites = await self.app.run_in_thread(self.service.favorites)
+        except AttributeError:
+            try:
+                favorites = self.service.favorites()
+            except Exception as exc:
+                self.query_one("#library-status", Static).update(
+                    f"Library data unavailable: {exc}"
+                )
+                return
+        except Exception as exc:
+            self.query_one("#library-status", Static).update(
+                f"Library data unavailable: {exc}"
+            )
+            return
+
+        self.history = tuple(history)
+        self.favorites = tuple(favorites)
+        self.app.refresh(recompose=True)
+        self.query_one("#library-status", Static).update(
+            "Library refreshed from PostgreSQL."
+        )
 
     def _continue_content(self) -> ComposeResult:
         for entry in self.history:
@@ -141,13 +227,10 @@ class LibraryScreen(Screen[None]):
         return round(value * 100 / entry.duration_seconds)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle library actions."""
         if event.button.id == "back":
             self.app.pop_screen()
         elif event.button.id == "refresh":
-            self.query_one("#library-status", Static).update(
-                "Library refresh requested. PostgreSQL-backed data source will be connected in the storage phase."
-            )
+            self.refresh()
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
