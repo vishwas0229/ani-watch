@@ -142,31 +142,19 @@ class LibraryScreen(Screen[None]):
                 return
 
         try:
-            history = await self.app.run_in_thread(self.service.history)
-        except AttributeError:
-            try:
-                history = self.service.history()
-            except Exception as exc:
-                self.query_one("#library-status", Static).update(
-                    f"Library data unavailable: {exc}"
-                )
-                return
-        except Exception as exc:
-            self.query_one("#library-status", Static).update(
-                f"Library data unavailable: {exc}"
+            history_worker = self.app.run_worker(
+                self.service.history,
+                thread=True,
+                exit_on_error=False,
             )
-            return
+            history = await history_worker.wait()
 
-        try:
-            favorites = await self.app.run_in_thread(self.service.favorites)
-        except AttributeError:
-            try:
-                favorites = self.service.favorites()
-            except Exception as exc:
-                self.query_one("#library-status", Static).update(
-                    f"Library data unavailable: {exc}"
-                )
-                return
+            favorites_worker = self.app.run_worker(
+                self.service.favorites,
+                thread=True,
+                exit_on_error=False,
+            )
+            favorites = await favorites_worker.wait()
         except Exception as exc:
             self.query_one("#library-status", Static).update(
                 f"Library data unavailable: {exc}"
@@ -175,7 +163,7 @@ class LibraryScreen(Screen[None]):
 
         self.history = tuple(history)
         self.favorites = tuple(favorites)
-        self.app.refresh(recompose=True)
+        self.refresh(recompose=True)
         self.query_one("#library-status", Static).update(
             "Library refreshed from PostgreSQL."
         )
