@@ -1,8 +1,4 @@
-import pytest
-
 from ani_watch.config.settings import PlaybackSettings
-from ani_watch.domain.errors import PlaybackError
-from ani_watch.player.vlc import VlcPlayer
 from ani_watch.services.playback import PlaybackHooks, PlaybackManager
 
 
