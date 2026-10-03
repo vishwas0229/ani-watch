@@ -39,5 +39,7 @@ def test_alembic_upgrade_is_idempotent(tmp_path: Path) -> None:
     upgrade(db.engine)
 
     with db.engine.connect() as connection:
-        revisions = connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
+        revisions = connection.execute(
+            text("SELECT version_num FROM alembic_version")
+        ).scalars().all()
     assert revisions == ["0001_initial"]
