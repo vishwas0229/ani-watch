@@ -173,7 +173,9 @@ class SettingsScreen(Screen[None]):
         self.settings.playback.auto_next = self._selected("#auto-next") == "true"
 
         self.store.save(self.settings)
-        self.app.add_class(f"theme-{self.settings.ui.theme}")
+        apply_theme = getattr(self.app, "apply_theme", None)
+        if callable(apply_theme):
+            apply_theme(self.settings.ui.theme)
         self.query_one("#settings-status", Static).update(
             "Settings saved successfully."
         )
