@@ -215,7 +215,7 @@ class HistoryScreen(Screen[None]):
     def _focus_selected(self) -> None:
         """Focus the selected row when history exists."""
         if self.entries:
-            self.query_one(self._entry_id(self._selected_index), Button).focus()
+            self.query_one(f"#{self._entry_id(self._selected_index)}", Button).focus()
 
     def _move_selection(self, step: int) -> None:
         """Move within the history list and clamp at its edges."""
