@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from sqlalchemy import desc, func, select
 
 from ani_watch.domain.models import WatchHistoryEntry
 from ani_watch.storage.database import Database
-from ani_watch.storage.models import AnimeRecord, HistoryRecord, ProgressRecord
-from ani_watch.storage.repositories import AnimeRepository, FavoriteRepository, HistoryRepository, ProgressRepository
-from sqlalchemy import desc, select
+from ani_watch.storage.models import FavoriteRecord, HistoryRecord, ProgressRecord
+from ani_watch.storage.repositories import (
+    AnimeRepository,
+    FavoriteRepository,
+    HistoryRepository,
+    ProgressRepository,
+)
 
 
 class LibraryService:
@@ -46,13 +52,15 @@ class LibraryService:
             duration_seconds,
             completed=completed,
         )
+
         if completed:
+            details = self.anime.get(anime_id)
             self.history.record(
                 WatchHistoryEntry(
                     anime_id=anime_id,
-                    anime_title=self.anime.get(anime_id).title if self.anime.get(anime_id) else "Unknown anime",
+                    anime_title=details.title if details else "Unknown anime",
                     episode_number=episode_number,
-                    watched_at=datetime.now(timezone.utc),
+                    watched_at=datetime.now(UTC),
                     progress_seconds=position_seconds,
                     duration_seconds=duration_seconds,
                 )
@@ -75,11 +83,12 @@ class LibraryService:
     def statistics(self) -> dict[str, int]:
         with self.db.session() as session:
             watched = session.scalar(
-                select(__import__("sqlalchemy").func.count(HistoryRecord.id))
+                select(func.count(HistoryRecord.id))
             ) or 0
             favorites = session.scalar(
-                select(__import__("sqlalchemy").func.count()).select_from(
-                    __import__("ani_watch.storage.models", fromlist=["FavoriteRecord"]).FavoriteRecord
-                )
+                select(func.count()).select_from(FavoriteRecord)
             ) or 0
-        return {"watched_episodes": int(watched), "favorites": int(favorites)}
+        return {
+            "watched_episodes": int(watched),
+            "favorites": int(favorites),
+        }
