@@ -32,7 +32,7 @@ class SettingsStore:
     def save(self, settings: AppSettings) -> None:
         """Atomically persist settings as TOML."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = tomli_w.dumps(settings.model_dump(mode="python"))
+        payload = tomli_w.dumps(settings.model_dump(mode="json"))
 
         with tempfile.NamedTemporaryFile(
             mode="w",
