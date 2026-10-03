@@ -10,8 +10,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
 from ani_watch.domain.details import AnimeDetails
-from ani_watch.metadata.client import AniListClient
-from ani_watch.metadata.service import AniListMetadataService
+from ani_watch.metadata.factory import build_metadata_service
 from ani_watch.tui.screens.episodes import EpisodeScreen
 
 
@@ -104,7 +103,7 @@ class AnimeDetailsScreen(Screen[None]):
     def __init__(
         self,
         anime: AnimeDetails | None = None,
-        service: AniListMetadataService | None = None,
+        service=None,
     ) -> None:
         super().__init__()
         self.anime = anime
@@ -246,7 +245,7 @@ class AnimeDetailsScreen(Screen[None]):
             )
 
     async def _open_episodes(self) -> None:
-        service = self.service or self._default_service()
+        service = self.service or build_metadata_service()
         try:
             episodes = await service.episodes(self.anime.anilist_id)
         except Exception as exc:
@@ -262,19 +261,6 @@ class AnimeDetailsScreen(Screen[None]):
                 anime_id=self.anime.anilist_id,
             )
         )
-
-    @staticmethod
-    def _default_service() -> AniListMetadataService:
-        from ani_watch.auth.anilist import TokenStore
-        from ani_watch.config.store import SettingsStore
-
-        settings = SettingsStore().load()
-        client = AniListClient(
-            url=settings.anilist.graphql_url,
-            access_token=TokenStore().load(),
-            timeout=settings.providers.timeout_seconds,
-        )
-        return AniListMetadataService(client)
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
