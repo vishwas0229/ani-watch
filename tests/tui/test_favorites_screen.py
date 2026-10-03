@@ -1,5 +1,6 @@
 from ani_watch.domain.favorite import FavoriteAnime
 from ani_watch.tui.app import AniWatchApp
+from ani_watch.tui.screens.details import AnimeDetailsScreen
 from ani_watch.tui.screens.favorites import FavoritesScreen
 
 
@@ -66,8 +67,8 @@ async def test_remove_favorite_updates_list_and_empty_state() -> None:
 
         assert len(app.screen.favorites) == 1
         assert app.screen.query_one("#favorites-summary").renderable == "1 favorite"
-        assert not app.screen.query("#favorite-0").first.label.startswith("Sample Anime")
-        
+        assert not app.screen.query_one("#favorite-0").label.startswith("Sample Anime")
+
         await pilot.click("#remove")
         await pilot.pause()
 
@@ -100,12 +101,12 @@ async def test_favorites_keyboard_navigation_and_open_details() -> None:
         await pilot.pause()
         assert app.screen.query_one("#favorite-1").has_focus
 
-        await pilot.press("enter")
+        await pilot.press("o")
         await pilot.pause()
 
-        assert "Details requested for Another Anime" in str(
-            app.screen.query_one("#favorites-status").renderable
-        )
+        assert isinstance(app.screen, AnimeDetailsScreen)
+        assert app.screen.query_one("#details-title").renderable == "Another Anime"
+        assert app.screen.query_one("#details-episodes-value").renderable == "12"
 
 
 async def test_favorites_screen_back_and_escape() -> None:
