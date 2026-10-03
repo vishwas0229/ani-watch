@@ -1,4 +1,4 @@
-from ani_watch.domain.favorite import FavoriteAnime
+from ani_watch.domain.models import FavoriteAnime
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 from ani_watch.tui.screens.favorites import FavoritesScreen

@@ -7,7 +7,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.details import AnimeDetails
+from ani_watch.domain.models import AnimeDetails
 
 
 class AnimeDetailsScreen(Screen[None]):

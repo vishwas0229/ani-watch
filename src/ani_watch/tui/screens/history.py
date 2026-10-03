@@ -7,7 +7,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.history import WatchHistoryEntry
+from ani_watch.domain.models import WatchHistoryEntry
 
 
 class HistoryScreen(Screen[None]):

@@ -5,9 +5,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import delete, desc, select
 
-from ani_watch.domain.favorite import FavoriteAnime
-from ani_watch.domain.history import WatchHistoryEntry
-from ani_watch.domain.details import AnimeDetails
+from ani_watch.domain.models import AnimeDetails, WatchHistoryEntry
 from ani_watch.storage.models import (
     AnimeRecord,
     EpisodeRecord,
