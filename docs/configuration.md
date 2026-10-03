@@ -19,4 +19,10 @@ The runtime requires an active Conda environment. The repository's default envir
 - `network.timeout_seconds`: HTTP timeout.
 - `network.retries`: retry count.
 
+### SQLite initialization
+
+For a file-backed SQLite URL, Ani-Watch creates the database's parent directory automatically before opening the engine. This allows a fresh installation to use the default platform data path without requiring a manual directory-creation step.
+
+In-memory SQLite URLs such as `sqlite:///:memory:` are left unchanged.
+
 AniList OAuth client credentials should be supplied through environment/configuration management appropriate for your deployment. Access tokens are stored through the OS credential store rather than written to normal log files.

@@ -12,10 +12,26 @@ from sqlalchemy.orm import Session, sessionmaker
 from ani_watch.storage.models import Base
 
 
+def sqlite_path(url: str) -> Path | None:
+    """Return the SQLite database path when the URL points to a file."""
+    if not url.startswith("sqlite:///"):
+        return None
+    return Path(url.removeprefix("sqlite:///")).expanduser()
+
+
+def _ensure_sqlite_parent(url: str) -> None:
+    """Create the parent directory for a file-backed SQLite database."""
+    path = sqlite_path(url)
+    if path is None or path.name == ":memory:":
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
 class Database:
     """Create an engine and manage SQLAlchemy sessions."""
 
     def __init__(self, url: str) -> None:
+        _ensure_sqlite_parent(url)
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
         self.engine = create_engine(
             url,
@@ -50,10 +66,3 @@ class Database:
     def dispose(self) -> None:
         """Close pooled database connections."""
         self.engine.dispose()
-
-
-def sqlite_path(url: str) -> Path | None:
-    """Return the SQLite database path when the URL points to a file."""
-    if not url.startswith("sqlite:///"):
-        return None
-    return Path(url.removeprefix("sqlite:///")).expanduser()

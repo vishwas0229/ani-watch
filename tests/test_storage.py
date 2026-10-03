@@ -16,6 +16,17 @@ def make_db(tmp_path: Path) -> Database:
     return db
 
 
+def test_sqlite_database_creates_missing_parent_directory(tmp_path: Path) -> None:
+    database_path = tmp_path / "nested" / "data" / "ani-watch.db"
+
+    db = Database(f"sqlite:///{database_path}")
+    db.create_schema()
+
+    assert database_path.parent.is_dir()
+    assert database_path.is_file()
+    db.dispose()
+
+
 def test_anime_repository_upserts_and_reads(tmp_path: Path) -> None:
     db = make_db(tmp_path)
     repo = AnimeRepository(db)
