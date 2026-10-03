@@ -67,7 +67,7 @@ async def test_search_screen_renders_provider_results(fake_service) -> None:
         await pilot.press("enter")
         await pilot.pause()
 
-        assert app.screen.query_one("#result-0").label == "Frieren"
+        assert str(app.screen.query_one("#result-0").label) == "Frieren"
         assert "Found 1 anime" in str(
             app.screen.query_one("#search-status").content
         )
