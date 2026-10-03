@@ -1,9 +1,10 @@
+from textual.widgets import Button, Static
+
 from ani_watch.domain.models import (
     ContinueWatchingItem,
     LibrarySnapshot,
     RecentlyWatchedItem,
 )
-from textual.widgets import Button, Static
 
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.library import LibraryScreen
