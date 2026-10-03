@@ -35,9 +35,6 @@ class SearchScreen(Screen[None]):
     .search-result { width: 1fr; margin-bottom: 1; }
     #back { margin-top: 1; }
 
-    @media (max-width: 60) {
-        #search-page { width: 100%; margin: 0; }
-    }
     """
 
     BINDINGS = [
