@@ -39,6 +39,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ani_watch"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"alembic.ini" = "alembic.ini"
+"migrations" = "migrations"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"

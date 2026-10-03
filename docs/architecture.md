@@ -30,7 +30,7 @@ Textual screens render domain data and dispatch actions. Provider-specific netwo
 The AniList adapter uses GraphQL requests and maps response data into stable, provider-neutral models. Network retry, timeout and rate-limit behavior is centralized in the client.
 
 ### Storage
-SQLAlchemy 2 models and repositories provide the persistence boundary. SQLite is suitable for local use and PostgreSQL is supported through the same interface.
+SQLAlchemy 2 models and repositories provide the persistence boundary. SQLite is suitable for local use and PostgreSQL is supported through the same interface. Alembic is the canonical schema migration mechanism; the CLI and database bootstrap execute the configured migration revisions instead of maintaining a separate schema-version table.
 
 ### Playback
 The VLC adapter owns libVLC calls. Playback services provide resume, pause, seek, volume, audio/subtitle selection, auto-next configuration, local-first preference, skip hooks and recovery.
