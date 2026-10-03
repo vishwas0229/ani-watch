@@ -36,11 +36,6 @@ class LibraryScreen(Screen[None]):
     #library-actions { height: auto; align-horizontal: center; }
     #library-actions Button { margin: 0 1; }
 
-    @media (max-width: 72) {
-        #library-page { width: 100%; margin: 0; }
-        #library-columns { layout: vertical; overflow-y: auto; }
-        .library-panel { width: 1fr; height: auto; min-height: 10; }
-    }
     """
 
     BINDINGS = [("escape", "go_back", "Back")]
