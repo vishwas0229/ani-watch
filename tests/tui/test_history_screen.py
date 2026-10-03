@@ -50,7 +50,9 @@ async def test_history_selection_updates_status() -> None:
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
 
-        await pilot.click("#history-1")
+        button = app.screen.query_one("#history-1")
+        button.focus()
+        await pilot.press("enter")
         await pilot.pause()
 
         assert "Selected Sample Anime • Episode 4" in str(
@@ -95,7 +97,9 @@ async def test_history_screen_back_and_escape() -> None:
     async with app.run_test() as pilot:
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
-        await pilot.click("#back")
+        back = app.screen.query_one("#back")
+        back.focus()
+        await pilot.press("enter")
         await pilot.pause()
         assert not isinstance(app.screen, HistoryScreen)
 
