@@ -71,7 +71,7 @@ async def test_remove_favorite_updates_list_and_empty_state() -> None:
 
         assert len(app.screen.favorites) == 1
         assert app.screen.query_one("#favorites-summary").content == "1 favorite"
-        assert not app.screen.query_one("#favorite-0").label.startswith("Sample Anime")
+        assert not str(app.screen.query_one("#favorite-0").label).startswith("Sample Anime")
 
         await pilot.click("#remove")
         await pilot.pause()
