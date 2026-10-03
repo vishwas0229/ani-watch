@@ -1,6 +1,6 @@
 """Lightweight schema migration manager."""
 
-import sqlalchemy as sa
+import sqlalchemy as sa  # noqa: I001
 
 from ani_watch.storage.models import Base
 
