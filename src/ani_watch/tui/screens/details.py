@@ -259,6 +259,7 @@ class AnimeDetailsScreen(Screen[None]):
             EpisodeScreen(
                 self.anime.title,
                 episodes,
+                anime_id=self.anime.anilist_id,
             )
         )
 
