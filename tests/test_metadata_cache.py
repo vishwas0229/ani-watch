@@ -1,5 +1,3 @@
-import pytest
-
 from ani_watch.domain.errors import OfflineError
 from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.metadata.cache import MemoryCache
@@ -81,8 +79,12 @@ async def test_offline_mode_reports_uncached_requests() -> None:
         offline=True,
     )
 
-    with pytest.raises(OfflineError, match="not cached locally"):
+    try:
         await service.search("unknown")
+    except OfflineError as exc:
+        assert "not cached locally" in str(exc)
+    else:
+        raise RuntimeError("Expected OfflineError for an uncached offline search")
 
 
 async def test_cached_service_closes_its_client_once() -> None:
