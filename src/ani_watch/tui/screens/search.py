@@ -7,8 +7,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Input, Label, Static
 
-from ani_watch.metadata.client import AniListClient
-from ani_watch.metadata.service import AniListMetadataService
+from ani_watch.metadata.factory import build_metadata_service
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 
 
@@ -66,7 +65,7 @@ class SearchScreen(Screen[None]):
         ("/", "focus_search", "Search"),
     ]
 
-    def __init__(self, service: AniListMetadataService | None = None) -> None:
+    def __init__(self, service=None) -> None:
         super().__init__()
         self.service = service
         self._result_refs = ()
@@ -121,7 +120,7 @@ class SearchScreen(Screen[None]):
 
     async def _search(self, query: str) -> None:
         """Fetch search results without blocking the TUI."""
-        service = self.service or self._default_service()
+        service = self.service or build_metadata_service()
         status = self.query_one("#search-status", Static)
         results = self.query_one("#search-results", VerticalScroll)
 
