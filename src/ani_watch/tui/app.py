@@ -33,15 +33,6 @@ class AniWatchApp(App[None]):
     #home-status { height: auto; padding: 0 2; color: $text-muted; }
     .theme-mono Screen { background: #101010; color: #e8e8e8; }
     .theme-high-contrast Screen { background: #000000; color: #ffffff; }
-    @media (max-width: 72) {
-        #home-columns { layout: vertical; overflow-y: auto; }
-        .home-panel { width: 1fr; height: auto; min-height: 8; margin: 0 0 1 0; padding: 1; }
-        #home-actions { align-horizontal: left; overflow-x: auto; }
-    }
-    @media (max-width: 52) {
-        #home-actions { layout: vertical; }
-        #home-actions Button { width: 1fr; margin-bottom: 1; }
-    }
     """
 
     BINDINGS = [

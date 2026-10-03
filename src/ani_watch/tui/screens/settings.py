@@ -58,21 +58,6 @@ class SettingsScreen(Screen[None]):
         margin: 0 1;
     }
 
-    @media (max-width: 80) {
-        #settings-page {
-            width: 100%;
-            margin: 0;
-        }
-
-        .setting-label {
-            width: 20;
-        }
-    }
-
-    @media (max-width: 60) {
-        .setting-row {
-            layout: vertical;
-        }
 
         .setting-label,
         .setting-control {
