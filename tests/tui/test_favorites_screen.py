@@ -30,7 +30,7 @@ async def test_favorites_screen_renders_saved_anime() -> None:
         await app.push_screen(FavoritesScreen(sample_favorites()))
         await pilot.pause()
 
-        assert app.screen.query_one("#favorites-summary").renderable == (
+        assert app.screen.query_one("#favorites-summary").content == (
             "2 favorites"
         )
         assert "Sample Anime • FINISHED • 24 eps • 91.4/100" in str(
@@ -51,7 +51,7 @@ async def test_favorites_selection_updates_status() -> None:
 
         assert app.screen.query_one("#favorite-1").has_class("selected")
         assert "Selected Another Anime" in str(
-            app.screen.query_one("#favorites-status").renderable
+            app.screen.query_one("#favorites-status").content
         )
 
 
@@ -66,7 +66,7 @@ async def test_remove_favorite_updates_list_and_empty_state() -> None:
         await pilot.pause()
 
         assert len(app.screen.favorites) == 1
-        assert app.screen.query_one("#favorites-summary").renderable == "1 favorite"
+        assert app.screen.query_one("#favorites-summary").content == "1 favorite"
         assert not app.screen.query_one("#favorite-0").label.startswith("Sample Anime")
 
         await pilot.click("#remove")
@@ -105,8 +105,8 @@ async def test_favorites_keyboard_navigation_and_open_details() -> None:
         await pilot.pause()
 
         assert isinstance(app.screen, AnimeDetailsScreen)
-        assert app.screen.query_one("#details-title").renderable == "Another Anime"
-        assert app.screen.query_one("#details-episodes-value").renderable == "12"
+        assert app.screen.query_one("#details-title").content == "Another Anime"
+        assert app.screen.query_one("#details-episodes-value").content == "12"
 
 
 async def test_favorites_screen_back_and_escape() -> None:

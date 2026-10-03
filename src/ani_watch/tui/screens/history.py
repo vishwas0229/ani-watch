@@ -203,7 +203,7 @@ class HistoryScreen(Screen[None]):
 
         self._clear_selection()
         self._selected_index = index
-        button = self.query_one(self._entry_id(index), Button)
+        button = self.query_one(f"#{self._entry_id(index)}", Button)
         button.add_class("selected")
         button.focus()
 

@@ -20,7 +20,7 @@ def test_app_can_be_constructed() -> None:
 async def test_home_screen_renders_primary_sections() -> None:
     app = AniWatchApp()
     async with app.run_test() as pilot:
-        assert app.query_one("#welcome-title", Label).renderable == "ANI-WATCH"
+        assert app.query_one("#welcome-title", Label).content == "ANI-WATCH"
         assert app.query_one("#continue-watching", Static)
         assert app.query_one("#search", Button)
         assert app.query_one("#history", Button)

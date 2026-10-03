@@ -33,7 +33,7 @@ async def test_history_screen_renders_entries() -> None:
         await app.push_screen(HistoryScreen(sample_history()))
         await pilot.pause()
 
-        assert app.screen.query_one("#history-summary").renderable == (
+        assert app.screen.query_one("#history-summary").content == (
             "2 watched episodes"
         )
         assert "Sample Anime • The Turning Point • 50%" in str(
@@ -54,7 +54,7 @@ async def test_history_selection_updates_status() -> None:
         await pilot.pause()
 
         assert "Selected Sample Anime • Episode 4" in str(
-            app.screen.query_one("#history-status").renderable
+            app.screen.query_one("#history-status").content
         )
         assert app.screen.query_one("#history-1").has_class("selected")
         assert not app.screen.query_one("#history-0").has_class("selected")
@@ -71,7 +71,7 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
         await pilot.pause()
 
         assert "Resume requested for Sample Anime" in str(
-            app.screen.query_one("#history-status").renderable
+            app.screen.query_one("#history-status").content
         )
 
 
@@ -84,7 +84,7 @@ async def test_empty_history_disables_resume() -> None:
 
         assert app.screen.query_one("#history-empty")
         assert app.screen.query_one("#resume").disabled
-        assert app.screen.query_one("#history-summary").renderable == (
+        assert app.screen.query_one("#history-summary").content == (
             "0 watched episodes"
         )
 

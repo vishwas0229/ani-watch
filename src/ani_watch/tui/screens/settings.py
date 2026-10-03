@@ -57,13 +57,6 @@ class SettingsScreen(Screen[None]):
     #settings-actions Button {
         margin: 0 1;
     }
-
-
-        .setting-label,
-        .setting-control {
-            width: 1fr;
-        }
-    }
     """
 
     BINDINGS = [

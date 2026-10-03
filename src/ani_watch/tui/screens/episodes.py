@@ -209,7 +209,7 @@ class EpisodeScreen(Screen[None]):
 
         self._clear_selection_classes()
         self._selected_index = index
-        button = self.query_one(self._episode_id(index), Button)
+        button = self.query_one(f"#{self._episode_id(index)}", Button)
         button.add_class("selected")
         self._focus_selected()
 
