@@ -93,9 +93,9 @@ class LibraryScreen(Screen[None]):
     async def on_mount(self) -> None:
         """Load the latest persisted library state when no snapshot was supplied."""
         if self._load_from_storage:
-            await self.refresh()
+            await self.refresh_library()
 
-    async def refresh(self) -> None:
+    async def refresh_library(self) -> None:
         """Re-query persistent state and rebuild the library dashboard."""
         service = self.library_service
         if service is None:
@@ -153,7 +153,7 @@ class LibraryScreen(Screen[None]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "refresh":
-            self.run_worker(self.refresh(), exclusive=True)
+            self.run_worker(self.refresh_library(), exclusive=True)
         elif event.button.id == "back":
             self.app.pop_screen()
 
