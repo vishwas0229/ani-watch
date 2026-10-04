@@ -50,12 +50,14 @@ class LocalFileProvider:
         )
 
     def _folder_names(self, anime: AnimeRef) -> tuple[str, ...]:
-        """Return exact and normalized folder names for folder-based media layouts."""
+        """Return common exact and normalized folder names for media libraries."""
+        spaced = re.sub(r"[^a-zA-Z0-9]+", " ", anime.title).strip()
         return tuple(
             name
             for name in dict.fromkeys(
                 (
                     anime.title.strip(),
+                    spaced,
                     self._slug(anime.title),
                 )
             )
@@ -89,11 +91,15 @@ class LocalFileProvider:
             (24, f"{episode_number:02d}.*"),
             (25, f"{episode_number}.*"),
         )
-        for folder_name in self._folder_names(anime):
-            for folder in (self.root / folder_name,):
-                try:
-                    if not folder.is_dir():
-                        continue
+        try:
+            folder_roots = tuple(self.root / folder_name for folder_name in self._folder_names(anime))
+        except (TypeError, AttributeError):
+            folder_roots = ()
+
+        for folder in folder_roots:
+            try:
+                if not folder.is_dir():
+                    continue
                     for rank, pattern in episode_patterns:
                         for path in folder.rglob(pattern):
                             try:
