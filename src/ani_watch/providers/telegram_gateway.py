@@ -139,6 +139,7 @@ class TelegramStreamingGateway:
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         """Handle one VLC HTTP request and stream only the requested byte range."""
+        response_started = False
         try:
             request_line = await asyncio.wait_for(reader.readline(), timeout=10)
             if not request_line:
@@ -193,6 +194,7 @@ class TelegramStreamingGateway:
                 start, end = requested
 
             length = max(0, end - start + 1) if handle.size else 0
+            response_started = True
             writer.write(
                 self._headers(
                     status,
@@ -209,11 +211,14 @@ class TelegramStreamingGateway:
                 return
 
             sent = 0
+            chunks = (length + self.chunk_size - 1) // self.chunk_size
             async for chunk in self.client.iter_download(
                 handle.message,
                 offset=start,
-                limit=length,
+                limit=chunks,
                 chunk_size=self.chunk_size,
+                request_size=self.chunk_size,
+                file_size=handle.size,
             ):
                 if not chunk:
                     continue
@@ -229,10 +234,11 @@ class TelegramStreamingGateway:
         except asyncio.CancelledError:
             raise
         except Exception:
-            try:
-                await self._write_status(writer, "502 Bad Gateway")
-            except Exception:
-                pass
+            if not response_started:
+                try:
+                    await self._write_status(writer, "502 Bad Gateway")
+                except Exception:
+                    pass
         finally:
             writer.close()
             try:
