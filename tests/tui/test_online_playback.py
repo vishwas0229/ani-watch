@@ -37,6 +37,7 @@ class FakeSession:
     def __init__(self, resolver) -> None:
         self.resolver = resolver
         self.provider_names: list[str | None] = []
+        self.candidates: list[MediaCandidate] = []
 
     async def start(
         self,
@@ -53,6 +54,18 @@ class FakeSession:
             provider=provider_name or "online",
             quality="1080p",
         )
+
+    def start_candidate(
+        self,
+        anime,
+        episode,
+        candidate,
+        *,
+        episode_index=0,
+        total_episodes=1,
+    ):
+        self.candidates.append(candidate)
+        return candidate
 
     def tick(self) -> bool:
         return False
