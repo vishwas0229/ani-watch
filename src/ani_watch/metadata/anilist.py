@@ -46,6 +46,18 @@ query ($id: Int!) {
 }
 """
 
+STREAMING_EPISODES_QUERY = """
+query ($id: Int!) {
+  Media(id: $id, type: ANIME) {
+    streamingEpisodes {
+      title
+      url
+      site
+    }
+  }
+}
+"""
+
 EPISODES_QUERY = """
 query ($id: Int!, $page: Int, $perPage: Int) {
   Media(id: $id, type: ANIME) {
@@ -166,6 +178,19 @@ class AniListClient:
         if not isinstance(media, dict):
             raise MetadataError(f"AniList anime {anime_id} was not found.")
         return media
+
+    async def streaming_episodes(self, anime_id: int) -> list[dict[str, Any]]:
+        """Fetch AniList's links to legal external streaming episode pages."""
+        data = await self.request(STREAMING_EPISODES_QUERY, {"id": anime_id})
+        media = data.get("Media")
+        if not isinstance(media, dict):
+            raise MetadataError(f"AniList anime {anime_id} was not found.")
+        episodes = media.get("streamingEpisodes") or []
+        return [
+            item
+            for item in episodes
+            if isinstance(item, dict) and item.get("url")
+        ]
 
     async def episodes(
         self,
