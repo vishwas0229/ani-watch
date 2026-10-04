@@ -39,7 +39,6 @@ class FakePlaybackSession:
     def next_episode_index(self, total: int) -> int | None:
         return self.next_index
 
-
     def save_progress(self) -> None:
         return
 
