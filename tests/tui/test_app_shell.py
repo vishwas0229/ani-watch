@@ -111,7 +111,7 @@ async def test_keyboard_library_shortcuts_use_shared_persistence(tmp_path: Path)
 
         await pilot.press("l")
         await pilot.pause()
-        assert app.screen.query_one("#library-summary").content == "0 watched • 1 favorite"
+        assert app.screen.query_one("#library-summary").content == "0 watched • 1 favorites"
 
     database.dispose()
 
