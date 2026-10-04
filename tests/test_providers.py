@@ -63,3 +63,32 @@ class _FailingRoot:
         if pattern.startswith("My Anime"):
             raise PermissionError("denied")
         return [self.path]
+
+
+
+def test_local_provider_accepts_unpadded_and_episode_filename_forms(tmp_path) -> None:
+    path = tmp_path / "naruto-shippuden-1.mkv"
+    path.touch()
+
+    provider = LocalFileProvider(tmp_path)
+    matches = provider._candidates(
+        AnimeRef(20, "Naruto: Shippuden"),
+        EpisodeRef(20, 1),
+    )
+
+    assert matches == [path]
+
+
+def test_local_provider_supports_anime_folder_layout(tmp_path) -> None:
+    folder = tmp_path / "Naruto Shippuden"
+    folder.mkdir()
+    path = folder / "Episode 01.mkv"
+    path.touch()
+
+    provider = LocalFileProvider(tmp_path)
+    matches = provider._candidates(
+        AnimeRef(21, "Naruto: Shippuden"),
+        EpisodeRef(21, 1),
+    )
+
+    assert matches == [path]
