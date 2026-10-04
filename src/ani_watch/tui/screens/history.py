@@ -139,7 +139,6 @@ class HistoryScreen(Screen[None]):
                 await self._rerender()
         self._focus_selected()
 
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle history selection and navigation actions."""
         action = event.button.id
@@ -306,9 +305,7 @@ class HistoryScreen(Screen[None]):
     async def _resume_selected(self) -> None:
         entry = self.entries[self._selected_index]
         duration_minutes = (
-            max(1, round(entry.duration_seconds / 60))
-            if entry.duration_seconds
-            else None
+            max(1, round(entry.duration_seconds / 60)) if entry.duration_seconds else None
         )
         episode = EpisodeItem(
             number=entry.episode_number,

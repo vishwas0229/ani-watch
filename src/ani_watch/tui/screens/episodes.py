@@ -295,9 +295,7 @@ class EpisodeScreen(Screen[None]):
             )
             return
 
-        self.query_one("#episode-status", Static).update(
-            f"Resolving Episode {episode.number}…"
-        )
+        self.query_one("#episode-status", Static).update(f"Resolving Episode {episode.number}…")
         self.run_worker(self._start_selected(), exclusive=True)
 
     async def _start_selected(self) -> None:

@@ -313,7 +313,7 @@ class AnimeDetailsScreen(Screen[None]):
         favorite.label = self._favorite_label()
         state = "added to" if self._favorite else "removed from"
         self.query_one("#details-status", Static).update(f"Anime {state} favorites.")
-    
+
     def open_episodes(self) -> None:
         """Load episode metadata and open the playback-ready episode screen."""
         if self.anime is None:

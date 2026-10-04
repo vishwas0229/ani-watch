@@ -178,7 +178,6 @@ async def test_anilist_episodes_page_through_schedule_when_count_unknown() -> No
     assert all(episode.duration_minutes == 23 for episode in episodes)
 
 
-
 async def test_cached_metadata_service_caches_episode_items() -> None:
     calls = 0
 

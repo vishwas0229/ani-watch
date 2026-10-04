@@ -207,4 +207,3 @@ class PlaybackSession:
         release = getattr(self.manager.player, "release", None)
         if callable(release):
             release()
-

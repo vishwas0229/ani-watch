@@ -84,9 +84,7 @@ async def test_play_action_requires_anime_identifier() -> None:
         await pilot.press("space")
         await pilot.pause()
 
-        assert "anime identifier is missing" in str(
-            app.screen.query_one("#episode-status").content
-        )
+        assert "anime identifier is missing" in str(app.screen.query_one("#episode-status").content)
 
 
 async def test_empty_episode_screen_disables_play() -> None:
