@@ -4,6 +4,7 @@ import pytest
 from ani_watch.auth.anilist import AniListAccountService, AniListOAuth
 from ani_watch.config.settings import AppSettings
 from ani_watch.domain.errors import AuthenticationError
+from ani_watch.domain.models import AnimeDetails
 from ani_watch.metadata.anilist import AniListClient
 from ani_watch.services.anilist_sync import AniListSyncService
 from ani_watch.services.library import LibraryService
@@ -179,12 +180,7 @@ async def test_sync_pushes_maximum_local_progress(tmp_path) -> None:
     database = Database(f"sqlite:///{tmp_path / 'sync.db'}")
     database.create_schema()
     library = LibraryService(database)
-    library.anime.upsert(
-        __import__("ani_watch.domain.models", fromlist=["AnimeDetails"]).AnimeDetails(
-            anilist_id=100,
-            title="Sample",
-        )
-    )
+    library.anime.upsert(AnimeDetails(anilist_id=100, title="Sample"))
     library.progress.save(100, 3, 60, 120, completed=False)
     library.progress.save(100, 4, 120, 120, completed=True)
     sync = AniListSyncService("token", client=FakeClient())
