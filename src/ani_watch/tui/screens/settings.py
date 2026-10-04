@@ -271,9 +271,7 @@ class SettingsScreen(Screen[None]):
         self.query_one("#auto-next", Select).value = (
             "true" if self.settings.playback.auto_next else "false"
         )
-        self.query_one("#local-media-root", Input).value = str(
-            self.settings.local_media_root or ""
-        )
+        self.query_one("#local-media-root", Input).value = str(self.settings.local_media_root or "")
         self.query_one("#online-media-url", Input).value = (
             self.settings.online_media_url_template or ""
         )
