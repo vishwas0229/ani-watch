@@ -10,7 +10,7 @@ The built-in local provider searches the configured local_media_root.
 
 ## Local file selection
 
-Local media matches are deterministic. The provider prefers an exact title pattern such as "Title - 01.*", then the normalized slug with spaces such as "title - 01.*", then the compact normalized slug such as "title-01.*". Within the same match class, paths are sorted lexically. Duplicate paths are resolved only once. Files or directories that become inaccessible during discovery are skipped so one bad filesystem entry does not abort provider resolution.
+Local media matches are deterministic and support common filename layouts. The provider prefers an exact title such as "Title - 01.ext", then unpadded episode numbers, "Episode 01", "E01", normalized title slugs such as "title-01.ext", and compact forms such as "title01.ext". It also supports an anime-folder layout such as "Title/Episode 01.ext". Within the same match class, paths are sorted lexically. Duplicate paths are resolved only once. Files or directories that become inaccessible during discovery are skipped so one bad filesystem entry does not abort provider resolution.
 
 ProviderRegistry controls deterministic order. ProviderResolver tries providers in order, records health, applies the circuit breaker and falls back after a failure.
 
