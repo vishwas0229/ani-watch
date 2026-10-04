@@ -8,8 +8,6 @@ if TYPE_CHECKING:
 
 from ani_watch.domain.errors import AuthenticationError, MetadataError
 from ani_watch.domain.models import AnimeDetails
-from ani_watch.storage.database import Database
-from ani_watch.storage.repositories import ProgressRepository
 from ani_watch.metadata.anilist import AniListClient
 
 WATCH_LIST_QUERY = """
