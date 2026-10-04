@@ -8,7 +8,6 @@ HTTP/HLS URL for the existing VLC pipeline.
 from __future__ import annotations
 
 import asyncio
-import re
 from string import Formatter
 from urllib.parse import quote, urlparse
 
