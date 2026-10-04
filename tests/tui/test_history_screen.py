@@ -79,7 +79,9 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await app.push_screen(HistoryScreen(sample_history(), playback_session=FakePlaybackSession()))
+        await app.push_screen(
+            HistoryScreen(sample_history(), playback_session=FakePlaybackSession())
+        )
         await pilot.pause()
 
         resume = app.screen.query_one("#resume")
