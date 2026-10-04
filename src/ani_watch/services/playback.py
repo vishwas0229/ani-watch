@@ -139,11 +139,14 @@ class PlaybackSession:
         """Resolve and start an episode using the saved local progress."""
         from ani_watch.domain.models import EpisodeRef
 
+        resolve_kwargs = {"quality": self.manager.quality()}
+        if provider_name is not None:
+            resolve_kwargs["provider_name"] = provider_name
+
         candidate = await self.resolver.resolve(
             anime,
             EpisodeRef(anime_id=anime.anilist_id, number=episode.number),
-            quality=self.manager.quality(),
-            provider_name=provider_name,
+            **resolve_kwargs,
         )
         progress = self.library.progress.get(anime.anilist_id, episode.number)
         resume_seconds = 0
