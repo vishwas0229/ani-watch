@@ -189,6 +189,20 @@ class HistoryRepository:
         ]
 
 
+    def has_recent_completion(self, anime_id: int, episode_number: int) -> bool:
+        """Return whether this episode already has a recorded completion."""
+        with self.db.session() as session:
+            return session.scalar(
+                select(HistoryRecord.id)
+                .where(
+                    HistoryRecord.anime_id == anime_id,
+                    HistoryRecord.episode_number == episode_number,
+                    HistoryRecord.duration_seconds.is_not(None),
+                    HistoryRecord.progress_seconds >= HistoryRecord.duration_seconds * 0.9,
+                )
+                .limit(1)
+            ) is not None
+
 class ProgressRepository:
     """Persist playback position and completion state."""
 
