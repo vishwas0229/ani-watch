@@ -161,7 +161,7 @@ async def test_history_resume_preserves_full_episode_context_for_auto_next() -> 
         app.screen._save_progress()
         await pilot.pause()
 
-        assert session.starts[1] == (3, 2, 3)
+        assert session.starts[1] == (3, 2, 6)
         assert "Playing Episode 3" in str(app.screen.query_one("#history-status").content)
 
 
