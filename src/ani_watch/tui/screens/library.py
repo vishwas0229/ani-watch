@@ -97,15 +97,7 @@ class LibraryScreen(Screen[None]):
 
     def refresh(self) -> None:
         """Re-query persistent state and rebuild the library dashboard."""
-        service = self.library_service or getattr(self.app, "library_service", None)
-        if service is None and hasattr(self.app, "get_library_service"):
-            try:
-                service = self.app.get_library_service()
-            except Exception as exc:
-                self.query_one("#library-summary", Static).update(
-                    f"Unable to load library: {exc}"
-                )
-                return
+        service = self.library_service
         if service is None:
             self.query_one("#library-summary", Static).update("Library service is unavailable.")
             return
