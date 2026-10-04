@@ -244,7 +244,11 @@ def telegram_configure(
 
 @telegram_app.command("login")
 def telegram_login(
-    phone: str | None = typer.Option(None, "--phone", help="Telegram phone number in international format."),
+    phone: str | None = typer.Option(
+        None,
+        "--phone",
+        help="Telegram phone number in international format.",
+    ),
 ) -> None:
     """Authorize the local Telegram MTProto session."""
     settings = SettingsStore().load()
