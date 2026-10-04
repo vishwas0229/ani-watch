@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from ani_watch.domain.models import AnimeDetails, WatchHistoryEntry
+from ani_watch.services.library import LibraryService
 from ani_watch.storage.database import Database
 from ani_watch.storage.repositories import (
     AnimeRepository,
@@ -130,7 +131,7 @@ def test_completion_history_is_idempotent(tmp_path: Path) -> None:
     db = make_db(tmp_path)
     AnimeRepository(db).upsert(AnimeDetails(anilist_id=6, title="Completed Anime"))
 
-    service = __import__("ani_watch.services.library", fromlist=["LibraryService"]).LibraryService(db)
+    service = LibraryService(db)
     service.save_progress(6, 1, 1200, 1200)
     service.save_progress(6, 1, 1200, 1200)
 
@@ -138,4 +139,3 @@ def test_completion_history_is_idempotent(tmp_path: Path) -> None:
     assert len(rows) == 1
     assert rows[0].anime_id == 6
     assert rows[0].episode_number == 1
-\n
