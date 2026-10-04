@@ -9,9 +9,9 @@ from ani_watch.services.library import LibraryService
 from ani_watch.services.playback import PlaybackManager, PlaybackSession
 from ani_watch.storage.database import Database
 from ani_watch.tui.app import AniWatchApp
+from ani_watch.tui.screens.details import AnimeDetailsScreen
 from ani_watch.tui.screens.episodes import EpisodeScreen
 from ani_watch.tui.screens.favorites import FavoritesScreen
-from ani_watch.tui.screens.details import AnimeDetailsScreen
 from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.library import LibraryScreen
 
@@ -114,7 +114,9 @@ def build_app(tmp_path: Path) -> tuple[AniWatchApp, Database, FakePlayer]:
     )
 
 
-async def test_details_to_episodes_to_playback_persists_progress_and_auto_next(tmp_path: Path) -> None:
+async def test_details_to_episodes_to_playback_persists_progress_and_auto_next(
+    tmp_path: Path,
+) -> None:
     app, database, player = build_app(tmp_path)
     library = app.library_service
     assert library is not None
