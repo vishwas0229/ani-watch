@@ -202,11 +202,7 @@ class EpisodeScreen(Screen[None]):
     def _episode_label(episode: EpisodeItem) -> str:
         """Format the visible episode row."""
         title = episode.title.strip() if episode.title else f"Episode {episode.number}"
-        duration = (
-            f" • {episode.duration_minutes}m"
-            if episode.duration_minutes is not None
-            else ""
-        )
+        duration = f" • {episode.duration_minutes}m" if episode.duration_minutes is not None else ""
         state = " • Watched" if episode.watched else ""
         if not episode.available:
             state = " • Unavailable"
@@ -349,16 +345,13 @@ class EpisodeScreen(Screen[None]):
             status.update(str(exc))
             return
         except Exception:
-            status.update(
-                "Unable to find online streaming links. Check your network connection."
-            )
+            status.update("Unable to find online streaming links. Check your network connection.")
             return
 
         links = links_by_episode.get(episode_number, [])
         if not links:
             status.update(
-                f"No legal online streaming link is listed by AniList for Episode "
-                f"{episode_number}."
+                f"No legal online streaming link is listed by AniList for Episode {episode_number}."
             )
             return
 
@@ -373,9 +366,7 @@ class EpisodeScreen(Screen[None]):
             return
 
         site = selected.get("site") or "online provider"
-        status.update(
-            f"Opened Episode {episode_number} on {site} in your default browser."
-        )
+        status.update(f"Opened Episode {episode_number} on {site} in your default browser.")
 
     def _provider_names(self) -> tuple[str, ...]:
         """Return the configured provider names when available."""
