@@ -67,9 +67,7 @@ class AniListOAuth:
                 return str(code)
 
         if "://" in value:
-            raise AuthenticationError(
-                "The callback URL does not contain an authorization code."
-            )
+            raise AuthenticationError("The callback URL does not contain an authorization code.")
         return value
 
     async def exchange_code(
@@ -147,9 +145,7 @@ class AniListAccountService:
         resolved_client_id = client_id or self.settings.anilist_client_id
         resolved_redirect = redirect_uri or self.settings.anilist_redirect_uri
         if not resolved_client_id or not resolved_redirect:
-            raise AuthenticationError(
-                "AniList client ID and redirect URI are required for login."
-            )
+            raise AuthenticationError("AniList client ID and redirect URI are required for login.")
         return self.oauth.authorization_url(resolved_client_id, resolved_redirect)
 
     async def login(
