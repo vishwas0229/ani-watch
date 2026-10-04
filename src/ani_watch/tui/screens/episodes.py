@@ -333,6 +333,11 @@ class EpisodeScreen(Screen[None]):
 
         session.record_completion()
         next_index = session.next_episode_index(len(self.episodes))
+        while next_index is not None and not self.episodes[next_index].available:
+            next_index += 1
+            if next_index >= len(self.episodes):
+                next_index = None
+
         if next_index is None:
             self.query_one("#episode-status", Static).update(
                 f"Episode {self.episodes[self._selected_index].number} completed."
