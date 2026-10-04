@@ -13,6 +13,9 @@ class FakePlaybackSession:
         self.active = True
         return MediaCandidate(uri="file:///episode.mp4", provider="fake")
 
+    def save_progress(self) -> None:
+        return
+
     def stop(self) -> None:
         self.active = False
 
