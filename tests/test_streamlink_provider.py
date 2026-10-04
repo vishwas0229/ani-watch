@@ -48,8 +48,6 @@ async def test_streamlink_provider_prefers_best_for_auto(monkeypatch) -> None:
             "best": SimpleNamespace(url="https://cdn.example/1080p.m3u8"),
         },
     )
-    provider = StreamlinkProvider("https://service.example/watch/{episode}")
-
     candidate = await provider.resolve(
         AnimeRef(42, "Sample"),
         EpisodeRef(42, 1),
