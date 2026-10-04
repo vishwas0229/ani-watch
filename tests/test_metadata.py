@@ -285,3 +285,75 @@ async def test_anilist_authenticated_request_maps_unauthorized_to_authentication
 
     with pytest.raises(AuthenticationError, match="auth.*failed"):
         await client.search("x")
+
+
+
+async def test_anilist_streaming_episodes_returns_legal_links() -> None:
+    payload = {
+        "data": {
+            "Media": {
+                "id": 42,
+                "streamingEpisodes": [
+                    {
+                        "title": "Episode 1",
+                        "url": "https://example.com/watch/42-1",
+                        "site": "Example",
+                    },
+                    {
+                        "title": "Episode 2",
+                        "url": "https://example.com/watch/42-2",
+                        "site": "Example",
+                    },
+                ],
+            }
+        }
+    }
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)), retries=0)
+    links = await client.streaming_episodes(42)
+
+    assert links[0]["url"] == "https://example.com/watch/42-1"
+    assert links[1]["site"] == "Example"
+
+
+async def test_cached_streaming_episodes_groups_links_by_episode() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "Media": {
+                        "id": 43,
+                        "streamingEpisodes": [
+                            {
+                                "title": "Episode 1",
+                                "url": "https://example.com/1",
+                                "site": "Example",
+                            },
+                            {
+                                "title": "Episode 1",
+                                "url": "https://example.test/1",
+                                "site": "Example Test",
+                            },
+                            {
+                                "title": "Episode 2",
+                                "url": "https://example.com/2",
+                                "site": "Example",
+                            },
+                        ],
+                    }
+                }
+            },
+        )
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    service = CachedMetadataService(client, cache=MemoryCache())
+    grouped = await service.streaming_episodes(43)
+
+    assert [item["site"] for item in grouped[1]] == ["Example", "Example Test"]
+    assert grouped[2][0]["url"] == "https://example.com/2"
+
+    await service.close()
