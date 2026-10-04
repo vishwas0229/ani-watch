@@ -11,8 +11,8 @@ from ani_watch.storage.database import Database
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
 from ani_watch.tui.screens.favorites import FavoritesScreen
-from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.details import AnimeDetailsScreen
+from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.library import LibraryScreen
 
 
@@ -121,11 +121,13 @@ async def test_details_to_episodes_to_playback_persists_progress_and_auto_next(t
     library.progress.save(100, 1, 30, 120)
 
     async with app.run_test() as pilot:
-        await app.push_screen(AnimeDetailsScreen(
-            AnimeDetails(anilist_id=100, title="Sample Anime", episodes=2),
-            metadata_service=app.metadata_service,
-            library_service=library,
-        ))
+        await app.push_screen(
+            AnimeDetailsScreen(
+                AnimeDetails(anilist_id=100, title="Sample Anime", episodes=2),
+                metadata_service=app.metadata_service,
+                library_service=library,
+            )
+        )
         await pilot.pause()
 
         await pilot.click("#favorite")
