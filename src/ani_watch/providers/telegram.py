@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from ani_watch.auth.telegram import TelegramAccountService, TelegramCredentialStore
 from ani_watch.config.settings import AppSettings
@@ -189,7 +190,10 @@ class TelegramMediaProvider:
         text = cls._text(message)
         explicit_anime_id = cls._anime_id_tag(text)
         if explicit_anime_id is not None:
-            return explicit_anime_id == anime.anilist_id and cls._episode_number(text) == episode.number
+            return (
+                explicit_anime_id == anime.anilist_id
+                and cls._episode_number(text) == episode.number
+            )
 
         return (
             cls._title_matches(anime.title, text)
