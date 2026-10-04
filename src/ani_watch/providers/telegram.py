@@ -18,15 +18,15 @@ class TelegramMediaProvider:
 
     name = "telegram"
     _anime_tag = re.compile(
-        r"(?:^|[\\s\\[({])(?:anilist(?:[_ -]?id)?|anime(?:[_ -]?id)?)\\s*[:=]\\s*(\\d+)",
+        r"(?:^|[\s\[({])(?:anilist(?:[_ -]?id)?|anime(?:[_ -]?id)?)\s*[:=]\s*(\d+)",
         re.IGNORECASE,
     )
     _episode_tag = re.compile(
-        r"(?:^|[\\s\\[({])(?:episode|ep)\\s*[:=#-]?\\s*(\\d{1,4})",
+        r"(?:^|[\s\[({])(?:episode|ep)\s*[:=#-]?\s*(\d{1,4})",
         re.IGNORECASE,
     )
     _episode_label = re.compile(
-        r"(?:^|[\\s._-])(?:episode|ep|e)\\s*[-_.:# ]*\\s*(\\d{1,4})(?:$|[\\s._-])",
+        r"(?:^|[\s._-])(?:episode|ep|e)\s*[-_.:# ]*\s*(\d{1,4})(?:$|[\s._-])",
         re.IGNORECASE,
     )
 
