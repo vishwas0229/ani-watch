@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select
 
 from ani_watch.domain.models import (
     ContinueWatchingItem,
@@ -37,7 +37,6 @@ class LibraryService:
 
     def unfavorite(self, anime_id: int) -> None:
         self.favorites.remove(anime_id)
-
 
     def favorite_entries(self, limit: int = 100) -> list[FavoriteAnime]:
         """Return persisted favorites with their stored anime metadata."""
