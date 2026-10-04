@@ -5,6 +5,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Label, Select, Static
 
+from ani_watch.auth.anilist import AniListTokenStore
 from ani_watch.config.settings import AppSettings
 from ani_watch.config.store import SettingsStore
 
@@ -47,6 +48,13 @@ class SettingsScreen(Screen[None]):
         height: auto;
         margin: 1 0;
         color: $text-muted;
+    }
+
+    #anilist-account {
+        height: auto;
+        padding: 1;
+        border: round $secondary;
+        margin-bottom: 1;
     }
 
     #settings-actions {
@@ -123,8 +131,12 @@ class SettingsScreen(Screen[None]):
                 )
 
             yield Static(
-                "Settings are stored locally and can be backed by PostgreSQL "
-                "through the storage service in later integrations.",
+                self._account_status(),
+                id="anilist-account",
+            )
+            yield Static(
+                "Settings are stored locally. Use 'ani-watch auth login', "
+                "'auth logout', 'auth status', or 'auth sync' for AniList account actions.",
                 id="settings-status",
             )
 
@@ -132,6 +144,21 @@ class SettingsScreen(Screen[None]):
                 yield Button("Save", id="save", variant="primary")
                 yield Button("Reset", id="reset")
                 yield Button("Back", id="back")
+
+    def on_mount(self) -> None:
+        """Show the current locally stored AniList authentication state."""
+        self.query_one("#anilist-account", Static).update(self._account_status())
+
+    @staticmethod
+    def _account_status() -> str:
+        """Return a token-presence status without exposing credentials."""
+        try:
+            authenticated = bool(AniListTokenStore().get())
+        except Exception:
+            return "AniList account: credential store unavailable."
+        if authenticated:
+            return "AniList account: signed in (token stored securely)."
+        return "AniList account: not signed in."
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle settings actions."""

@@ -236,6 +236,28 @@ class ProgressRepository:
                 )
             ).scalar_one_or_none()
 
+    def list_for_anime(self, anime_id: int) -> list[ProgressRecord]:
+        """Return every tracked progress row for one anime."""
+        with self.db.session() as session:
+            return list(
+                session.scalars(
+                    select(ProgressRecord)
+                    .where(ProgressRecord.anime_id == anime_id)
+                    .order_by(ProgressRecord.episode_number)
+                ).all()
+            )
+
+    def list_all(self, limit: int = 1000) -> list[ProgressRecord]:
+        """Return tracked progress rows for local AniList sync."""
+        with self.db.session() as session:
+            return list(
+                session.scalars(
+                    select(ProgressRecord)
+                    .order_by(desc(ProgressRecord.updated_at))
+                    .limit(max(1, limit))
+                ).all()
+            )
+
     def list_continue_watching(self, limit: int = 20) -> list[ContinueWatchingItem]:
         """Return incomplete progress rows with anime titles in one projection query."""
         with self.db.session() as session:

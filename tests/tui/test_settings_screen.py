@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 
 from textual.widgets import Button
 
+from ani_watch.auth.anilist import AniListTokenStore
 from ani_watch.config.store import SettingsStore
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.settings import SettingsScreen
@@ -56,3 +57,16 @@ async def test_settings_escape_returns() -> None:
         await pilot.pause()
 
         assert not isinstance(app.screen, SettingsScreen)
+
+
+async def test_settings_screen_shows_anilist_account_state(monkeypatch) -> None:
+    monkeypatch.setattr(AniListTokenStore, "get", lambda self: "stored-token")
+    app = AniWatchApp()
+
+    async with app.run_test() as pilot:
+        await app.push_screen(SettingsScreen())
+        await pilot.pause()
+
+        assert app.screen.query_one("#anilist-account").content == (
+            "AniList account: signed in (token stored securely)."
+        )

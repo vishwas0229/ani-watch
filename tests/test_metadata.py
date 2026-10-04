@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from ani_watch.domain.errors import MetadataError, RateLimitError
+from ani_watch.domain.errors import AuthenticationError, MetadataError, RateLimitError
 from ani_watch.metadata.anilist import AniListClient
 from ani_watch.metadata.cache import MemoryCache
 from ani_watch.metadata.cached import CachedMetadataService
@@ -237,4 +237,19 @@ async def test_anilist_rate_limit_raises_after_retries() -> None:
     )
 
     with pytest.raises(RateLimitError):
+        await client.search("x")
+
+
+@pytest.mark.asyncio
+async def test_anilist_authenticated_request_maps_unauthorized_to_authentication_error() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401)
+
+    client = AniListClient(
+        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        retries=0,
+        access_token="expired-token",
+    )
+
+    with pytest.raises(AuthenticationError, match="auth.*failed"):
         await client.search("x")

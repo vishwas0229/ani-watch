@@ -1,8 +1,13 @@
 """AniList watch-list synchronization service."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ani_watch.services.library import LibraryService
+
 
 from ani_watch.domain.errors import AuthenticationError, MetadataError
+from ani_watch.domain.models import AnimeDetails
 from ani_watch.metadata.anilist import AniListClient
 
 WATCH_LIST_QUERY = """
@@ -43,10 +48,25 @@ VIEWER_QUERY = "query { Viewer { id name } }"
 class AniListSyncService:
     """Pull and push a user's AniList media-list state."""
 
-    def __init__(self, access_token: str) -> None:
+    def __init__(
+        self,
+        access_token: str,
+        *,
+        client: AniListClient | None = None,
+        timeout: float = 10.0,
+        retries: int = 3,
+    ) -> None:
         if not access_token:
             raise AuthenticationError("AniList access token is required.")
-        self.client = AniListClient(access_token=access_token)
+        self.client = client or AniListClient(
+            access_token=access_token,
+            timeout=timeout,
+            retries=retries,
+        )
+
+    async def close(self) -> None:
+        """Close the underlying AniList client."""
+        await self.client.close()
 
     async def viewer(self) -> dict[str, Any]:
         data = await self.client.request(VIEWER_QUERY)
@@ -64,6 +84,81 @@ class AniListSyncService:
             for entry in group.get("entries", [])
             if isinstance(entry, dict)
         ]
+
+    async def pull_into_library(
+        self,
+        library: "LibraryService",
+        user_id: int,
+    ) -> int:
+        """Merge remote AniList episode progress into local persistence."""
+        entries = await self.pull_watch_list(user_id)
+        applied = 0
+
+        for entry in entries:
+            media_id = self._positive_int(entry.get("mediaId"))
+            if media_id is None:
+                continue
+
+            remote_progress = max(0, self._positive_int(entry.get("progress")) or 0)
+            anime = library.anime.get(media_id)
+            if anime is None:
+                library.anime.upsert(
+                    AnimeDetails(
+                        anilist_id=media_id,
+                        title=f"AniList #{media_id}",
+                    )
+                )
+
+            local_rows = library.progress.list_for_anime(media_id)
+            local_progress = self.local_episode_progress(local_rows)
+            merged = self.reconcile_progress(local_progress, remote_progress)
+
+            if merged > local_progress:
+                library.progress.save(
+                    media_id,
+                    merged,
+                    0,
+                    None,
+                    completed=True,
+                )
+                applied += 1
+
+        return applied
+
+    async def push_library_progress(self, library: "LibraryService") -> int:
+        """Push local watch progress to AniList, grouped per media item."""
+        grouped: dict[int, int] = {}
+        for record in library.progress.list_all():
+            progress = record.episode_number
+            if not record.completed:
+                progress = max(0, progress - 1)
+            grouped[record.anime_id] = max(grouped.get(record.anime_id, 0), progress)
+
+        pushed = 0
+        for media_id, progress in grouped.items():
+            await self.push_progress(media_id, progress)
+            pushed += 1
+        return pushed
+
+    @staticmethod
+    def local_episode_progress(records: list[Any]) -> int:
+        """Convert per-episode local rows to an AniList-style progress count."""
+        progress = 0
+        for record in records:
+            episode = max(0, int(record.episode_number))
+            progress = max(
+                progress,
+                episode if record.completed else max(0, episode - 1),
+            )
+        return progress
+
+    @staticmethod
+    def _positive_int(value: Any) -> int | None:
+        try:
+            integer = int(value)
+        except (TypeError, ValueError):
+            return None
+        return integer if integer >= 0 else None
 
     async def push_progress(self, media_id: int, progress: int) -> dict[str, Any]:
         return await self._mutate(
