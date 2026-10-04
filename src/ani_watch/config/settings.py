@@ -46,5 +46,6 @@ class AppSettings(BaseModel):
     anilist_client_secret: str | None = None
     anilist_redirect_uri: str = "http://localhost:8080/callback"
     local_media_root: Path | None = None
+    streamlink_url_template: str | None = None
     online_media_url_template: str | None = None
     provider_enabled: bool = True
