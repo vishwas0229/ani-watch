@@ -84,7 +84,7 @@ class StreamlinkProvider:
 
         ranked = []
         for name, stream in streams.items():
-            match = re.search(r"(\\d{3,4})p", str(name).lower())
+            match = re.search(r"(\d{3,4})p", str(name).lower())
             if match:
                 ranked.append((int(match.group(1)), str(name), stream))
         if ranked:
