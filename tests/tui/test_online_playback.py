@@ -50,7 +50,7 @@ class FakeSession:
         self.provider_names.append(provider_name)
         return MediaCandidate(
             uri="https://media.example/episode.m3u8",
-            provider="online",
+            provider=provider_name or "online",
             quality="1080p",
         )
 
