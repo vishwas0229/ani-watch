@@ -2,11 +2,11 @@ from types import SimpleNamespace
 
 import pytest
 
+import ani_watch.providers.streamlink as streamlink_provider
 from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import AnimeRef, EpisodeRef
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.streamlink import StreamlinkProvider
-import ani_watch.providers.streamlink as streamlink_provider
 
 
 async def test_streamlink_provider_resolves_requested_quality(monkeypatch) -> None:
