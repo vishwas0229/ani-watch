@@ -48,4 +48,7 @@ class AppSettings(BaseModel):
     local_media_root: Path | None = None
     streamlink_url_template: str | None = None
     online_media_url_template: str | None = None
+    telegram_api_id: int | None = Field(default=None, gt=0)
+    telegram_channel: str | None = None
+    telegram_scan_limit: int = Field(default=1000, ge=1, le=10000)
     provider_enabled: bool = True

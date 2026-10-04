@@ -4,13 +4,13 @@ A modular terminal-based anime discovery, tracking, library and playback client.
 
 ## Current status
 
-The application is in active development and now contains the end-to-end architecture for the TUI, AniList metadata, local persistence, playback, providers, synchronization, caching, packaging and reliability layers.
+The application contains the end-to-end architecture for the TUI, AniList metadata, local persistence, playback, providers, synchronization, caching and reliability layers. It also supports an optional Telegram-backed personal media source.
 
 ## Supported runtime
 
 Ani-Watch is **Conda-only** and requires the repository environment:
 
-```bash
+```
 conda env create -f environment.yml
 conda activate ani-watch
 python -m pip install -e ".[dev]"
@@ -18,7 +18,7 @@ python -m pip install -e ".[dev]"
 
 The primary source-checkout launcher is:
 
-```bash
+```
 python main.py
 ```
 
@@ -36,6 +36,8 @@ python main.py
 - Provider registry, resolver fallback, health monitoring and circuit breaking
 - Built-in local-file provider for user-owned media
 - Streamlink-backed online playback for supported services/protocols, with direct-media fallback
+- Optional Telegram MTProto provider for authorized personal media in a private channel
+- Range-capable local Telegram gateway that streams media to VLC without first downloading the complete file
 - AniList OAuth login helpers, secure OS credential storage, list sync and mutations
 - Memory cache, optional Redis cache, timeout/retry handling, rate-limit handling and offline/degraded mode
 - Conda installers for Linux, macOS and Windows
@@ -43,7 +45,7 @@ python main.py
 
 ## External requirements
 
-The Python dependencies are installed through the Conda environment. VLC/libVLC is required by the playback adapter. PostgreSQL and Redis are optional services enabled through configuration.
+The Python dependencies are installed through the Conda environment. VLC/libVLC is required by the playback adapter. PostgreSQL and Redis are optional services enabled through configuration. Telegram is optional and requires a Telegram application created through my.telegram.org.
 
 ## Configuration
 
@@ -55,16 +57,52 @@ Important runtime settings include:
 - optional Redis URL
 - local media root
 - Streamlink URL template and optional direct online media URL template
+- optional Telegram API ID, private channel and scan limit
 - playback quality, audio, subtitle, volume, auto-next and local-first preferences
 - UI theme and density
 - HTTP timeout and retry count
 - AniList OAuth application settings
 
+The Telegram API hash is stored in the operating-system keyring rather than the configuration file. The Telegram MTProto session is stored in the platform data directory and is ignored by Git.
+
+## Telegram personal media
+
+Ani-Watch keeps the anime catalog and episode metadata in AniList. Telegram is only a playback source for authorized/user-owned media.
+
+Create the Telegram application at:
+
+https://my.telegram.org/apps
+
+Then configure Ani-Watch:
+
+```
+ani-watch telegram configure
+ani-watch telegram login
+ani-watch telegram status
+ani-watch telegram sync
+```
+
+Recommended Telegram caption mapping for exact episode matching:
+
+```
+anilist_id=123 episode=1
+```
+
+You can also use the fallback filename format:
+
+```
+Naruto - Episode 01.mp4
+```
+
+The Telegram provider is inserted into the normal provider resolver, so the existing AniList-backed episode UI remains unchanged. When Telegram resolves an authorized media message, VLC receives a local HTTP URL and the gateway retrieves requested byte ranges from Telegram on demand.
+
+See [Telegram personal media](docs/telegram.md) for the complete setup and troubleshooting guide.
+
 ## AniList account commands
 
 After configuring your AniList OAuth client ID, client secret, and redirect URI:
 
-```bash
+```
 ani-watch auth login
 ani-watch auth status
 ani-watch auth sync
@@ -72,12 +110,13 @@ ani-watch auth sync --no-pull --push
 ani-watch auth logout
 ```
 
-The login flow prints the AniList authorization URL and accepts either the returned authorization code or the full callback URL. Tokens are stored through the operating system credential store and are never written to application logs. Sync reconciles watch progress with the local library; use `--push` explicitly to send local progress to AniList.
+The login flow prints the AniList authorization URL and accepts either the returned authorization code or the full callback URL. Tokens are stored through the operating system credential store and are never written to application logs.
 
 ## Documentation
 
 - [Installation](docs/installation.md)
 - [Configuration](docs/configuration.md)
+- [Telegram personal media](docs/telegram.md)
 - [Architecture](docs/architecture.md)
 - [Providers](docs/providers.md)
 - [Troubleshooting](docs/troubleshooting.md)
@@ -86,7 +125,7 @@ The login flow prints the AniList authorization URL and accepts either the retur
 
 ## Development checks
 
-```bash
+```
 conda activate ani-watch
 python -m pytest
 python -m ruff check .

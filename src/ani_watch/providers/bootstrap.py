@@ -8,6 +8,7 @@ from ani_watch.providers.local import LocalFileProvider
 from ani_watch.providers.online import DirectUrlProvider
 from ani_watch.providers.registry import ProviderRegistry
 from ani_watch.providers.streamlink import StreamlinkProvider
+from ani_watch.providers.telegram import TelegramMediaProvider
 
 
 def build_provider_registry(settings: AppSettings) -> ProviderRegistry:
@@ -25,6 +26,9 @@ def build_provider_registry(settings: AppSettings) -> ProviderRegistry:
 
     if settings.playback.local_first and local_root is not None:
         registry.register(LocalFileProvider(local_root))
+
+    if settings.telegram_api_id and settings.telegram_channel:
+        registry.register(TelegramMediaProvider(settings))
 
     if settings.streamlink_url_template:
         try:

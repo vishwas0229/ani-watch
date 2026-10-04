@@ -1,4 +1,3 @@
-from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import EpisodeItem
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.registry import ProviderRegistry
@@ -112,11 +111,7 @@ async def test_watch_online_prefers_streamlink_when_both_are_configured() -> Non
     resolver = type(
         "Resolver",
         (),
-        {
-            "providers": ProviderRegistry(
-                [FakeOnlineProvider(), FakeStreamlinkProvider()]
-            )
-        },
+        {"providers": ProviderRegistry([FakeOnlineProvider(), FakeStreamlinkProvider()])},
     )()
     session = FakeSession(resolver)
     app = AniWatchApp(provider_resolver=resolver, playback_session=session)
@@ -193,4 +188,3 @@ async def test_watch_online_auto_resolves_anilist_link_with_streamlink(monkeypat
         assert "Playing Episode 1 via Streamlink in VLC" in str(
             app.screen.query_one("#episode-status").content
         )
-

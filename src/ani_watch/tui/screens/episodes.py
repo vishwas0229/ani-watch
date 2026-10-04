@@ -402,10 +402,7 @@ class EpisodeScreen(Screen[None]):
             return
 
         sites = ", ".join(
-            dict.fromkeys(
-                str(item.get("site") or "unknown provider")
-                for item in links
-            )
+            dict.fromkeys(str(item.get("site") or "unknown provider") for item in links)
         )
         status.update(
             f"No VLC-compatible stream was resolved for Episode {episode_number} "
