@@ -21,6 +21,7 @@ app = typer.Typer(
 
 db_app = typer.Typer(help="Database administration commands.")
 app.add_typer(db_app, name="db")
+app.add_typer(auth_app, name="auth")
 
 
 @app.command()
