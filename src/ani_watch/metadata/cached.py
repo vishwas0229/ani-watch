@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ani_watch.domain.errors import OfflineError
-from ani_watch.domain.models import AnimeDetails, AnimeRef
+from ani_watch.domain.models import AnimeDetails, AnimeRef, EpisodeItem
 from ani_watch.metadata.anilist import AniListClient
 from ani_watch.metadata.cache import MemoryCache, RedisCache
 
@@ -96,11 +96,8 @@ class CachedMetadataService:
         )
         return details
 
-
-    async def episode_items(self, anime_id: int) -> list["EpisodeItem"]:
+    async def episode_items(self, anime_id: int) -> list[EpisodeItem]:
         """Return cached/provider-neutral episode rows for one anime."""
-        from ani_watch.domain.models import EpisodeItem
-
         key = f"episodes:{anime_id}"
         cached = self.cache.get(key)
         if cached is not None:
