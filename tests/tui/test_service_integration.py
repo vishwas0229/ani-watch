@@ -12,8 +12,8 @@ from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
-from ani_watch.tui.screens.library import LibraryScreen
 from ani_watch.tui.screens.details import AnimeDetailsScreen
+from ani_watch.tui.screens.library import LibraryScreen
 
 
 class FakeMetadataService:
@@ -135,7 +135,7 @@ async def test_details_to_episodes_to_playback_persists_progress_and_auto_next(t
         await pilot.pause()
 
         assert isinstance(app.screen, EpisodeScreen)
-        assert app.screen.query_one("#episode-0").label.startswith("01 • One")
+        assert str(app.screen.query_one("#episode-0").label).startswith("01 • One")
 
         await pilot.click("#play")
         await pilot.pause()
