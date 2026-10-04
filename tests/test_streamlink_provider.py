@@ -82,7 +82,7 @@ async def test_streamlink_provider_wraps_resolution_errors(monkeypatch) -> None:
     monkeypatch.setattr(streamlink_provider.streamlink, "streams", fail)
     provider = StreamlinkProvider("https://service.example/watch/{episode}")
 
-    with pytest.raises(ProviderError, match="could not resolve the configured URL"):
+    with pytest.raises(ProviderError, match="could not resolve the online source"):
         await provider.resolve(
             AnimeRef(42, "Sample"),
             EpisodeRef(42, 1),
@@ -102,7 +102,7 @@ async def test_streamlink_provider_resolve_url_uses_instance(monkeypatch) -> Non
     )
     provider = StreamlinkProvider("https://service.example/watch/{episode}")
 
-    candidate = await provider.resolve_url(
+    candidate = await StreamlinkProvider.resolve_url(
         "https://service.example/watch/1",
         quality="auto",
     )

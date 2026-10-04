@@ -1,7 +1,6 @@
 from textual.widgets import Button
 
 from ani_watch.domain.errors import ProviderError
-from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import EpisodeItem
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
