@@ -8,6 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Input, Label, Select, Static
 
 from ani_watch.auth.anilist import AniListTokenStore
+from ani_watch.auth.telegram import TelegramCredentialStore
 from ani_watch.config.settings import AppSettings
 from ani_watch.config.store import SettingsStore
 
@@ -85,6 +86,7 @@ class SettingsScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         """Render editable settings with responsive layout."""
+        telegram_hash_configured = bool(TelegramCredentialStore().get_api_hash())
         with Vertical(id="settings-page"):
             yield Label("SETTINGS", id="settings-heading")
 
@@ -159,6 +161,44 @@ class SettingsScreen(Screen[None]):
                     classes="setting-control",
                 )
 
+            with Horizontal(classes="setting-row"):
+                yield Label("Telegram API ID", classes="setting-label")
+                yield Input(
+                    value=str(self.settings.telegram_api_id or ""),
+                    placeholder="12345678",
+                    id="telegram-api-id",
+                    classes="setting-control",
+                )
+
+            with Horizontal(classes="setting-row"):
+                yield Label("Telegram API hash", classes="setting-label")
+                yield Input(
+                    placeholder="Stored securely in OS keyring"
+                    if telegram_hash_configured
+                    else "Paste api_hash here (masked)",
+                    password=True,
+                    id="telegram-api-hash",
+                    classes="setting-control",
+                )
+
+            with Horizontal(classes="setting-row"):
+                yield Label("Telegram channel", classes="setting-label")
+                yield Input(
+                    value=self.settings.telegram_channel or "",
+                    placeholder="@username or -1001234567890",
+                    id="telegram-channel",
+                    classes="setting-control",
+                )
+
+            with Horizontal(classes="setting-row"):
+                yield Label("Telegram scan limit", classes="setting-label")
+                yield Input(
+                    value=str(self.settings.telegram_scan_limit),
+                    placeholder="1000",
+                    id="telegram-scan-limit",
+                    classes="setting-control",
+                )
+
             yield Static(
                 self._provider_status(),
                 id="provider-status",
@@ -168,9 +208,9 @@ class SettingsScreen(Screen[None]):
                 id="anilist-account",
             )
             yield Static(
-                "Settings are stored locally. For online playback, configure a Streamlink "
-                "URL template for a supported service, or a direct authorized media URL template "
-                "using {anime_id}, {episode}, {episode_padded}, {quality}, or {title}.",
+                "Telegram media is optional. Run 'ani-watch telegram login' once after "
+                "configuring the API ID, API hash, and private channel. Telegram credentials "
+                "are never stored in the repository.",
                 id="settings-status",
             )
 
@@ -204,11 +244,15 @@ class SettingsScreen(Screen[None]):
         if self.settings.online_media_url_template:
             statuses.append("online direct-media template configured")
 
+        if self.settings.telegram_api_id and self.settings.telegram_channel:
+            if TelegramCredentialStore().get_api_hash():
+                statuses.append("Telegram personal media configured")
+            else:
+                statuses.append("Telegram API hash missing")
         if not statuses:
             return (
-                "Playback provider: not configured. Set Local media for user-owned files, "
-                "Streamlink URL for a supported service, or Direct media URL for an "
-                "authorized media endpoint."
+                "Playback provider: not configured. Set Local media, Telegram personal media, "
+                "Streamlink URL, or Direct media URL for an authorized source."
             )
         return "Playback providers: " + " • ".join(statuses)
 
@@ -262,6 +306,54 @@ class SettingsScreen(Screen[None]):
         raw_online = self.query_one("#online-media-url", Input).value.strip()
         self.settings.online_media_url_template = raw_online or None
 
+        raw_api_id = self.query_one("#telegram-api-id", Input).value.strip()
+        if raw_api_id:
+            try:
+                parsed_api_id = int(raw_api_id)
+            except ValueError:
+                self.query_one("#provider-status", Static).update(
+                    "Telegram API ID must be a positive integer."
+                )
+                return
+            if parsed_api_id <= 0:
+                self.query_one("#provider-status", Static).update(
+                    "Telegram API ID must be a positive integer."
+                )
+                return
+            self.settings.telegram_api_id = parsed_api_id
+        else:
+            self.settings.telegram_api_id = None
+
+        self.settings.telegram_channel = (
+            self.query_one("#telegram-channel", Input).value.strip() or None
+        )
+
+        raw_scan_limit = self.query_one("#telegram-scan-limit", Input).value.strip()
+        if raw_scan_limit:
+            try:
+                scan_limit = int(raw_scan_limit)
+            except ValueError:
+                self.query_one("#provider-status", Static).update(
+                    "Telegram scan limit must be an integer between 1 and 10000."
+                )
+                return
+            if not 1 <= scan_limit <= 10000:
+                self.query_one("#provider-status", Static).update(
+                    "Telegram scan limit must be between 1 and 10000."
+                )
+                return
+            self.settings.telegram_scan_limit = scan_limit
+
+        api_hash = self.query_one("#telegram-api-hash", Input).value.strip()
+        if api_hash:
+            try:
+                TelegramCredentialStore().save_api_hash(api_hash)
+            except Exception as exc:
+                self.query_one("#provider-status", Static).update(
+                    f"Unable to store Telegram API hash securely: {exc}"
+                )
+                return
+
         self.store.save(self.settings)
         app = self.app
         if hasattr(app, "settings"):
@@ -273,9 +365,12 @@ class SettingsScreen(Screen[None]):
             app.playback_session = None
         apply_theme = getattr(self.app, "apply_theme", None)
         if callable(apply_theme):
-            apply_theme(self.settings.ui.theme)
+            apply_theme(self.settings.ui.theme
+        )
         self.query_one("#provider-status", Static).update(self._provider_status())
-        self.query_one("#settings-status", Static).update("Settings saved successfully.")
+        self.query_one("#settings-status", Static).update(
+            "Settings saved. Run 'ani-watch telegram login' once to authorize Telegram."
+        )
 
     def reset_settings(self) -> None:
         """Reset controls to typed defaults without network access."""
@@ -293,6 +388,10 @@ class SettingsScreen(Screen[None]):
         self.query_one("#online-media-url", Input).value = (
             self.settings.online_media_url_template or ""
         )
+        self.query_one("#telegram-api-id", Input).value = str(self.settings.telegram_api_id or "")
+        self.query_one("#telegram-api-hash", Input).value = ""
+        self.query_one("#telegram-channel", Input).value = self.settings.telegram_channel or ""
+        self.query_one("#telegram-scan-limit", Input).value = str(self.settings.telegram_scan_limit)
         self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(
             "Settings reset. Press Save to persist the defaults."
