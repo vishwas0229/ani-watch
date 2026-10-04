@@ -6,9 +6,9 @@ def test_release_workflow_has_quality_build_smoke_and_publish_gates() -> None:
     text = workflow.read_text(encoding="utf-8")
 
     assert "quality:" in text
-    assert 'python -m pytest' in text
-    assert 'python -m ruff check .' in text
-    assert 'python -m ruff format --check .' in text
+    assert "python -m pytest" in text
+    assert "python -m ruff check ." in text
+    assert "python -m ruff format --check ." in text
     assert "build:" in text
     assert "needs: quality" in text
     assert "python -m build --wheel --sdist" in text
