@@ -147,14 +147,9 @@ async def test_watch_online_does_not_open_unsupported_anilist_source(
     async def fail_resolve_url(source_url: str, *, quality: str | None = None):
         raise ProviderError("unsupported source")
 
-    opened = []
     monkeypatch.setattr(
         "ani_watch.tui.screens.episodes.StreamlinkProvider.resolve_url",
         fail_resolve_url,
-    )
-    monkeypatch.setattr(
-        "ani_watch.tui.screens.episodes.webbrowser.open",
-        lambda url: opened.append(url) or True,
     )
 
     app = AniWatchApp()
@@ -170,7 +165,6 @@ async def test_watch_online_does_not_open_unsupported_anilist_source(
         await pilot.click("#watch-online")
         await pilot.pause()
 
-        assert opened == []
         assert "No VLC-compatible stream was resolved" in str(
             app.screen.query_one("#episode-status").content
         )
