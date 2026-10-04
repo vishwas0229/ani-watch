@@ -202,7 +202,11 @@ class EpisodeScreen(Screen[None]):
     def _episode_label(episode: EpisodeItem) -> str:
         """Format the visible episode row."""
         title = episode.title.strip() if episode.title else f"Episode {episode.number}"
-        duration = f" • {episode.duration_minutes}m" if episode.duration_minutes is not None else ""
+        duration = (
+            f" • {episode.duration_minutes}m"
+            if episode.duration_minutes is not None
+            else ""
+        )
         state = " • Watched" if episode.watched else ""
         if not episode.available:
             state = " • Unavailable"
@@ -288,19 +292,47 @@ class EpisodeScreen(Screen[None]):
         self.metadata_service = service
         return service
 
+    def _provider_resolver(self):
+        """Return the configured provider resolver without constructing VLC."""
+        resolver = getattr(self.app, "provider_resolver", None)
+        if resolver is None and hasattr(self.app, "get_provider_resolver"):
+            resolver = self.app.get_provider_resolver()
+        return resolver
+
+    def _has_online_provider(self) -> bool:
+        """Return whether a direct online provider is configured."""
+        resolver = self._provider_resolver()
+        return resolver is not None and resolver.providers.get("online") is not None
+
     def watch_online(self) -> None:
-        """Open an AniList-listed legal streaming page for the selected episode."""
+        """Start direct online playback or open an official streaming page."""
         if not self.episodes:
             self.query_one("#episode-status", Static).update(
                 "No episode is available to watch online."
             )
             return
         episode = self.episodes[self._selected_index]
+        if not episode.available:
+            self.query_one("#episode-status", Static).update(
+                f"Episode {episode.number} is unavailable."
+            )
+            return
         if self.anime_id is None:
             self.query_one("#episode-status", Static).update(
                 "Online playback is unavailable because the anime identifier is missing."
             )
             return
+
+        if self._has_online_provider():
+            self.query_one("#episode-status", Static).update(
+                f"Starting online playback for Episode {episode.number}…"
+            )
+            self.run_worker(
+                self._start_selected(provider_name="online"),
+                exclusive=True,
+            )
+            return
+
         self.query_one("#episode-status", Static).update(
             f"Finding an official stream for Episode {episode.number}…"
         )
@@ -391,7 +423,7 @@ class EpisodeScreen(Screen[None]):
         self.query_one("#episode-status", Static).update(f"Resolving Episode {episode.number}…")
         self.run_worker(self._start_selected(), exclusive=True)
 
-    async def _start_selected(self) -> None:
+    async def _start_selected(self, provider_name: str | None = None) -> None:
         """Resolve and start the selected episode through application services."""
         episode = self.episodes[self._selected_index]
         status = self.query_one("#episode-status", Static)
@@ -401,8 +433,17 @@ class EpisodeScreen(Screen[None]):
                 episode,
                 episode_index=self._selected_index,
                 total_episodes=len(self.episodes),
+                provider_name=provider_name,
             )
         except ProviderError:
+            if provider_name == "online":
+                status.update(
+                    "Online provider could not resolve this episode. Check Settings → "
+                    "Online media URL and make sure it points to direct media such as an "
+                    "HLS playlist (.m3u8) or video file."
+                )
+                return
+
             provider_names = ", ".join(self._provider_names()) or "none"
             status.update(
                 f"Episode {episode.number} could not be resolved by the configured providers "
