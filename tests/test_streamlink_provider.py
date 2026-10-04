@@ -92,3 +92,20 @@ async def test_streamlink_provider_wraps_resolution_errors(monkeypatch) -> None:
 def test_streamlink_provider_rejects_unknown_placeholders() -> None:
     with pytest.raises(ValueError, match="Unsupported Streamlink URL placeholder"):
         StreamlinkProvider("https://service.example/{server}/{episode}")
+
+
+async def test_streamlink_provider_resolve_url_uses_instance(monkeypatch) -> None:
+    monkeypatch.setattr(
+        streamlink_provider.streamlink,
+        "streams",
+        lambda url: {"best": type("Stream", (), {"url": "https://cdn.example/episode.m3u8"})()},
+    )
+    provider = StreamlinkProvider("https://service.example/watch/{episode}")
+
+    candidate = await provider.resolve_url(
+        "https://service.example/watch/1",
+        quality="auto",
+    )
+
+    assert candidate.uri == "https://cdn.example/episode.m3u8"
+    assert candidate.provider == "streamlink"
