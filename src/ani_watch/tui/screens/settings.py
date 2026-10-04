@@ -375,7 +375,8 @@ class SettingsScreen(Screen[None]):
             apply_theme(self.settings.ui.theme)
         self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(
-            "Settings saved successfully. Run 'ani-watch telegram login' once to authorize Telegram."
+            "Settings saved successfully. "
+            "Run 'ani-watch telegram login' once to authorize Telegram."
         )
 
     def reset_settings(self) -> None:
