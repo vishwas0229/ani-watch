@@ -10,8 +10,7 @@ from ani_watch.config.runtime import CondaEnvironmentError, require_conda_enviro
 from ani_watch.config.settings import AppSettings
 from ani_watch.config.store import SettingsStore
 from ani_watch.domain.errors import AuthenticationError, ConfigurationError
-from ani_watch.metadata.service import AnimeMetadataService
-from ani_watch.metadata.anilist import AniListClient
+from ani_watch.providers.telegram import TelegramMediaProvider
 from ani_watch.services.anilist_sync import AniListSyncService
 from ani_watch.services.library import LibraryService
 from ani_watch.storage.database import Database
@@ -296,10 +295,7 @@ def telegram_sync(
 ) -> None:
     """List authorized Telegram media visible to Ani-Watch."""
     settings = SettingsStore().load()
-    provider = __import__(
-        "ani_watch.providers.telegram",
-        fromlist=["TelegramMediaProvider"],
-    ).TelegramMediaProvider(settings)
+    provider = TelegramMediaProvider(settings)
     try:
         items = asyncio.run(provider.list_media(limit=limit))
     except Exception as exc:
