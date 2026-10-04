@@ -124,7 +124,6 @@ class StreamlinkProvider:
             return False
         return streamlink is not None
 
-    @staticmethod
     async def resolve_url(
         self,
         source_url: str,
