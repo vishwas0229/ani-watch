@@ -10,6 +10,12 @@ from ani_watch.config.store import SettingsStore
 from ani_watch.metadata.anilist import AniListClient
 from ani_watch.metadata.cache import MemoryCache, RedisCache
 from ani_watch.metadata.cached import CachedMetadataService
+from ani_watch.player.vlc import VlcPlayer
+from ani_watch.providers.discovery import discover_providers
+from ani_watch.providers.resilience import ProviderResolver
+from ani_watch.services.library import LibraryService
+from ani_watch.services.playback import PlaybackManager, PlaybackSession
+from ani_watch.storage.database import Database
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
 from ani_watch.tui.screens.library import LibraryScreen
@@ -70,6 +76,10 @@ class AniWatchApp(App[None]):
         *,
         settings: AppSettings | None = None,
         metadata_service: CachedMetadataService | None = None,
+        library_service: LibraryService | None = None,
+        provider_resolver: ProviderResolver | None = None,
+        playback_session: PlaybackSession | None = None,
+        database: Database | None = None,
     ) -> None:
         super().__init__()
         self.settings = settings or SettingsStore().load()
@@ -82,6 +92,37 @@ class AniWatchApp(App[None]):
             cache=self._build_metadata_cache(),
             offline=self.settings.network.offline_mode,
         )
+        self.database = database
+        self.library_service = library_service
+        self.provider_resolver = provider_resolver
+        self.playback_session = playback_session
+
+        self._owns_database = database is None
+
+    def get_library_service(self) -> LibraryService:
+        """Return the shared persistence service, initializing it on demand."""
+        if self.library_service is None:
+            self.database = self.database or Database(self.settings.database_url)
+            self.database.create_schema()
+            self.library_service = LibraryService(self.database)
+        return self.library_service
+
+    def get_provider_resolver(self) -> ProviderResolver:
+        """Return the shared provider resolver."""
+        if self.provider_resolver is None:
+            self.provider_resolver = ProviderResolver(discover_providers(self.settings))
+        return self.provider_resolver
+
+    def get_playback_session(self) -> PlaybackSession:
+        """Create the VLC-backed playback session on first playback request."""
+        if self.playback_session is None:
+            manager = PlaybackManager(VlcPlayer(), self.settings.playback)
+            self.playback_session = PlaybackSession(
+                manager,
+                self.get_provider_resolver(),
+                self.get_library_service(),
+            )
+        return self.playback_session
 
     def _build_metadata_cache(self) -> MemoryCache | RedisCache:
         """Build the configured metadata cache with a safe local fallback."""
@@ -95,8 +136,12 @@ class AniWatchApp(App[None]):
 
     async def on_unmount(self) -> None:
         """Release resources owned by the application shell."""
+        if self.playback_session is not None:
+            self.playback_session.close()
         if self._owns_metadata_service:
             await self.metadata_service.close()
+        if self._owns_database and self.database is not None:
+            self.database.dispose()
 
     def on_mount(self) -> None:
         self.apply_theme(self.settings.ui.theme)
@@ -161,11 +206,11 @@ class AniWatchApp(App[None]):
         elif action == "search":
             self.push_screen(SearchScreen(metadata_service=self.metadata_service))
         elif action == "history":
-            self.push_screen(HistoryScreen())
+            self.push_screen(HistoryScreen(library_service=self.get_library_service()))
         elif action == "favorites":
-            self.push_screen(FavoritesScreen())
+            self.push_screen(FavoritesScreen(library_service=self.get_library_service()))
         elif action == "library":
-            self.push_screen(LibraryScreen())
+            self.push_screen(LibraryScreen(library_service=self.get_library_service()))
         elif action == "settings":
             self.push_screen(
                 SettingsScreen(
