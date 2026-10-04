@@ -20,9 +20,16 @@ The project intentionally does not implement DRM bypassing or unauthorized copyr
 
 ## Online watching
 
-The TUI can use the AniList `streamingEpisodes` field to find links to legal external streaming episode pages. These links are opened in the user's default browser rather than treated as direct media files.
+Ani-Watch has two online-provider paths:
 
-For VLC-based online playback, configure an authorized **direct media URL template** in Settings → Online media URL. The template may use:
+1. **Streamlink** accepts a configured streaming page or direct stream URL and resolves supported services/protocols into a playable stream. Streamlink provides a plugin system for supported services and supports direct HLS/DASH/HTTP stream protocols. VOD support varies by service, because Streamlink primarily targets streaming services and has limited VOD coverage.
+2. **Direct media** is the deterministic fallback for a user-authorized HLS playlist, MP4, or similar media endpoint that VLC can open directly.
+
+Configure either path in Settings. Streamlink is preferred when both are configured; direct media is used as the second online provider.
+
+### Streamlink URL template
+
+The Streamlink template may use:
 
 - `{anime_id}`
 - `{episode}`
@@ -30,12 +37,21 @@ For VLC-based online playback, configure an authorized **direct media URL templa
 - `{quality}`
 - `{title}` (URL-encoded)
 
-For example:
+Example:
+
+```text
+https://service.example/watch/{anime_id}/{episode_padded}
+```
+
+Ani-Watch runs Streamlink asynchronously so the TUI is not blocked while a supported service is resolved. For streams exposing an HTTP/HLS URL, that URL is handed to the existing ProviderResolver → PlaybackSession → VLC pipeline, preserving resume, progress tracking and auto-next.
+
+### Direct media URL template
+
+The direct-media template uses the same placeholders. For example:
 
 ```text
 https://media.example/anime/{anime_id}/episode/{episode_padded}.m3u8
 ```
 
-The online provider passes the rendered URL into the existing ProviderResolver → PlaybackSession → VLC pipeline. HLS playlists such as `.m3u8` and direct video files can therefore use the same resume, progress tracking and auto-next features as local media, provided the configured endpoint is directly playable by VLC.
+Use only media endpoints you are authorized to access. An external watch page is not automatically a direct media URL, and Ani-Watch does not implement DRM bypassing or unauthorized source scraping.
 
-Use only media endpoints you are authorized to access. An external watch page is not automatically a direct media URL and should remain in the browser flow.
