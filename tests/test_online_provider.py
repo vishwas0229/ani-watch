@@ -47,18 +47,19 @@ async def test_direct_url_provider_rejects_non_media_uri_scheme() -> None:
         await provider.resolve(AnimeRef(1, "Sample"), EpisodeRef(1, 1))
 
 
-def test_bootstrap_registers_online_provider_and_respects_local_first(tmp_path: Path) -> None:
+def test_bootstrap_registers_streamlink_before_direct_online_provider(tmp_path: Path) -> None:
     settings = AppSettings(
         local_media_root=tmp_path,
+        streamlink_url_template="https://service.example/watch/{anime_id}/{episode}",
         online_media_url_template="https://media.example/{anime_id}/{episode}.m3u8",
     )
 
     local_first = build_provider_registry(settings)
-    assert local_first.names == ("local", "online")
+    assert local_first.names == ("local", "streamlink", "online")
 
     settings.playback.local_first = False
     online_first = build_provider_registry(settings)
-    assert online_first.names == ("online", "local")
+    assert online_first.names == ("streamlink", "online", "local")
 
 
 def test_bootstrap_wraps_invalid_online_template_as_configuration_error() -> None:
