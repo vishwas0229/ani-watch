@@ -45,7 +45,9 @@ async def test_history_screen_renders_entries() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await app.push_screen(HistoryScreen(sample_history(), playback_session=FakePlaybackSession()))
+        await app.push_screen(
+            HistoryScreen(sample_history(), playback_session=FakePlaybackSession())
+        )
         await pilot.pause()
 
         assert app.screen.query_one("#history-summary").content == ("2 watched episodes")
