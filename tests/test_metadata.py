@@ -79,6 +79,7 @@ async def test_anilist_episodes_map_known_episode_count() -> None:
         "data": {
             "Media": {
                 "id": 2,
+                "status": "FINISHED",
                 "episodes": 3,
                 "duration": 24,
                 "airingSchedule": {
@@ -101,6 +102,37 @@ async def test_anilist_episodes_map_known_episode_count() -> None:
     assert all(episode.title is None for episode in episodes)
     assert all(episode.duration_minutes == 24 for episode in episodes)
     assert all(episode.available for episode in episodes)
+
+
+async def test_anilist_episodes_mark_unaired_numbers_unavailable() -> None:
+    payload = {
+        "data": {
+            "Media": {
+                "id": 10,
+                "status": "RELEASING",
+                "episodes": 12,
+                "duration": 24,
+                "airingSchedule": {
+                    "nodes": [{"episode": 1}, {"episode": 2}],
+                    "pageInfo": {"hasNextPage": False},
+                },
+            }
+        }
+    }
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=payload)
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    service = CachedMetadataService(client, cache=MemoryCache())
+
+    episodes = await service.episode_items(10)
+
+    assert [episode.number for episode in episodes] == list(range(1, 13))
+    assert [episode.available for episode in episodes[:2]] == [True, True]
+    assert all(not episode.available for episode in episodes[2:])
+
+    await service.close()
 
 
 async def test_anilist_episodes_use_schedule_when_count_is_missing() -> None:
