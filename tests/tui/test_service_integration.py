@@ -132,16 +132,16 @@ async def test_details_to_episodes_to_playback_persists_progress_and_auto_next(
         )
         await pilot.pause()
 
-        await pilot.click("#favorite")
+        app.screen.query_one("#favorite").focus()\n        await pilot.press("enter")
         assert library.favorites.list() == [100]
 
-        await pilot.click("#episodes")
+        app.screen.query_one("#episodes").focus()\n        await pilot.press("enter")
         await pilot.pause()
 
         assert isinstance(app.screen, EpisodeScreen)
         assert str(app.screen.query_one("#episode-0").label).startswith("01 • One")
 
-        await pilot.click("#play")
+        app.screen.query_one("#play").focus()\n        await pilot.press("enter")
         await pilot.pause()
 
         assert player.loaded[-1].endswith("episode-1.mp4")
