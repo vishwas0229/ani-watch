@@ -12,6 +12,9 @@ class FakeMetadataService:
             EpisodeItem(number=1, title="One"),
             EpisodeItem(number=2, title="Two"),
             EpisodeItem(number=3, title="Three"),
+            EpisodeItem(number=4, title="Four"),
+            EpisodeItem(number=5, title="Five"),
+            EpisodeItem(number=6, title="Six"),
         ]
 
 
@@ -123,17 +126,27 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
         await pilot.pause()
 
         assert "Resumed Sample Anime" in str(app.screen.query_one("#history-status").content)
-        assert session.starts == [(5, 0, 3)]
+        assert session.starts == [(5, 4, 6)]
 
 
 async def test_history_resume_preserves_full_episode_context_for_auto_next() -> None:
     session = FakePlaybackSession(completion=True, next_index=2)
+    entries = (
+        WatchHistoryEntry(
+            anime_id=1,
+            anime_title="Sample Anime",
+            episode_number=2,
+            episode_title="Two",
+            progress_seconds=60,
+            duration_seconds=120,
+        ),
+    )
 
     app = AniWatchApp()
     async with app.run_test() as pilot:
         await app.push_screen(
             HistoryScreen(
-                sample_history(),
+                entries,
                 playback_session=session,
                 metadata_service=FakeMetadataService(),
             )
@@ -143,7 +156,7 @@ async def test_history_resume_preserves_full_episode_context_for_auto_next() -> 
         await pilot.click("#resume")
         await pilot.pause()
 
-        assert session.starts[0] == (5, 0, 3)
+        assert session.starts[0] == (2, 1, 6)
 
         app.screen._save_progress()
         await pilot.pause()
