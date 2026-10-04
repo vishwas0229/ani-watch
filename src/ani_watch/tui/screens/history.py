@@ -8,6 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
 from ani_watch.domain.models import AnimeRef, EpisodeItem, WatchHistoryEntry
+from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.services.library import LibraryService
 from ani_watch.services.playback import PlaybackSession
 
@@ -88,14 +89,18 @@ class HistoryScreen(Screen[None]):
         *,
         library_service: LibraryService | None = None,
         playback_session: PlaybackSession | None = None,
+        metadata_service: CachedMetadataService | None = None,
     ) -> None:
         super().__init__()
         self.entries = tuple(entries)
         self.library_service = library_service
         self.playback_session = playback_session
+        self.metadata_service = metadata_service
         self._load_from_storage = not bool(entries)
         self._selected_index = 0
+        self._episodes: tuple[EpisodeItem, ...] = ()
         self._playback_timer = None
+        self._starting_next = False
 
     def compose(self) -> ComposeResult:
         """Render recent watch-history entries."""
@@ -302,23 +307,67 @@ class HistoryScreen(Screen[None]):
         self.query_one("#history-status", Static).update("Resolving saved playback…")
         self.run_worker(self._resume_selected(), exclusive=True)
 
-    async def _resume_selected(self) -> None:
-        entry = self.entries[self._selected_index]
+    def _metadata(self) -> CachedMetadataService | None:
+        """Return the injected or application-owned metadata service."""
+        service = self.metadata_service or getattr(self.app, "metadata_service", None)
+        return service
+
+    async def _load_episode_context(
+        self,
+        entry: WatchHistoryEntry,
+    ) -> tuple[tuple[EpisodeItem, ...], int]:
+        """Load the full episode list and locate the history entry in it."""
+        metadata = self._metadata()
+        if metadata is not None:
+            episodes = list(await metadata.episode_items(entry.anime_id))
+        else:
+            episodes = []
+
         duration_minutes = (
             max(1, round(entry.duration_seconds / 60)) if entry.duration_seconds else None
         )
-        episode = EpisodeItem(
-            number=entry.episode_number,
-            title=entry.episode_title,
-            duration_minutes=duration_minutes,
-            watched=True,
+        selected_index = next(
+            (
+                index
+                for index, episode in enumerate(episodes)
+                if episode.number == entry.episode_number
+            ),
+            None,
         )
+
+        if selected_index is None:
+            episodes.append(
+                EpisodeItem(
+                    number=entry.episode_number,
+                    title=entry.episode_title,
+                    duration_minutes=duration_minutes,
+                    watched=True,
+                    available=True,
+                )
+            )
+            selected_index = len(episodes) - 1
+        else:
+            source = episodes[selected_index]
+            episodes[selected_index] = EpisodeItem(
+                number=source.number,
+                title=source.title or entry.episode_title,
+                duration_minutes=source.duration_minutes or duration_minutes,
+                watched=True,
+                available=True,
+            )
+
+        return tuple(episodes), selected_index
+
+    async def _resume_selected(self) -> None:
+        entry = self.entries[self._selected_index]
         try:
+            episodes, selected_index = await self._load_episode_context(entry)
+            episode = episodes[selected_index]
             candidate = await self._session().start(
                 AnimeRef(anilist_id=entry.anime_id, title=entry.anime_title),
                 episode,
-                episode_index=0,
-                total_episodes=1,
+                episode_index=selected_index,
+                total_episodes=len(episodes),
             )
         except Exception as exc:
             self.query_one("#history-status", Static).update(
@@ -326,29 +375,76 @@ class HistoryScreen(Screen[None]):
             )
             return
 
+        self._episodes = episodes
         self.query_one("#history-status", Static).update(
             f"Resumed {entry.anime_title} • Episode {entry.episode_number} "
-            f"via {candidate.provider}."
+            f"via {candidate.provider}. Auto-next context loaded."
         )
         if self._playback_timer is None:
             self._playback_timer = self.set_interval(1, self._save_progress)
 
     def _save_progress(self) -> None:
-        """Persist resume progress without duplicating playback lifecycle logic."""
+        """Persist resume progress and continue with auto-next when enabled."""
         if self.playback_session is None or not self.playback_session.active:
             return
         try:
-            self.playback_session.tick()
+            completed = self.playback_session.tick()
         except Exception:
             self.query_one("#history-status", Static).update(
                 "Playback tracking failed. The current position may not be saved."
             )
+            return
+
+        if not completed or self._starting_next or not self._episodes:
+            return
+
+        next_index = self.playback_session.next_episode_index(len(self._episodes))
+        while next_index is not None and not self._episodes[next_index].available:
+            next_index += 1
+            if next_index >= len(self._episodes):
+                next_index = None
+
+        if next_index is None:
+            self.query_one("#history-status", Static).update(
+                "Resumed episode completed. No next episode is available."
+            )
+            return
+
+        self._starting_next = True
+        self.query_one("#history-status", Static).update(
+            f"Episode completed. Starting Episode {self._episodes[next_index].number}…"
+        )
+        self.run_worker(self._start_next_episode(next_index), exclusive=True)
+
+    async def _start_next_episode(self, index: int) -> None:
+        """Start the next episode while keeping the same playback session."""
+        entry = self.entries[self._selected_index]
+        episode = self._episodes[index]
+        try:
+            candidate = await self._session().start(
+                AnimeRef(anilist_id=entry.anime_id, title=entry.anime_title),
+                episode,
+                episode_index=index,
+                total_episodes=len(self._episodes),
+            )
+        except Exception as exc:
+            self._starting_next = False
+            self.query_one("#history-status", Static).update(
+                f"Unable to start Episode {episode.number}: {exc}"
+            )
+            return
+
+        self._starting_next = False
+        self.query_one("#history-status", Static).update(
+            f"Playing Episode {episode.number} via {candidate.provider}. Auto-next is enabled."
+        )
 
     def stop_playback(self) -> None:
         """Persist the resume position and stop playback before leaving."""
         if self._playback_timer is not None:
             self._playback_timer.pause()
             self._playback_timer = None
+        self._starting_next = False
         if self.playback_session is not None:
             self.playback_session.stop()
 
