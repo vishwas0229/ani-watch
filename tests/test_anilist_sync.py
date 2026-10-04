@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -29,7 +31,7 @@ async def test_oauth_exchange_uses_mocked_http_and_returns_token() -> None:
     captured = {}
 
     async def handler(request: httpx.Request) -> httpx.Response:
-        captured.update(request.json())
+        captured.update(json.loads(request.content))
         return httpx.Response(200, json={"access_token": "secret-token"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
