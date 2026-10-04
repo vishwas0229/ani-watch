@@ -345,6 +345,7 @@ class AnimeDetailsScreen(Screen[None]):
                 self.anime.title,
                 episodes,
                 anime_id=self.anime.anilist_id,
+                metadata_service=self._metadata(),
             )
         )
 
