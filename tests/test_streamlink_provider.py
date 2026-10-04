@@ -97,7 +97,13 @@ async def test_streamlink_provider_resolve_url_uses_class_method(monkeypatch) ->
     monkeypatch.setattr(
         streamlink_provider.streamlink,
         "streams",
-        lambda url: {"best": type("Stream", (), {"url": "https://cdn.example/episode.m3u8"})()},
+        lambda url: {
+            "best": type(
+                "Stream",
+                (),
+                {"url": "https://cdn.example/episode.m3u8"},
+            )()
+        },
     )
     candidate = await StreamlinkProvider.resolve_url(
         "https://service.example/watch/1",
