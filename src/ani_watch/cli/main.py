@@ -5,9 +5,13 @@ import asyncio
 import typer
 
 from ani_watch.auth.anilist import AniListAccountService
+from ani_watch.auth.telegram import TelegramAccountService, TelegramCredentialStore
 from ani_watch.config.runtime import CondaEnvironmentError, require_conda_environment
 from ani_watch.config.settings import AppSettings
+from ani_watch.config.store import SettingsStore
 from ani_watch.domain.errors import AuthenticationError, ConfigurationError
+from ani_watch.metadata.service import AnimeMetadataService
+from ani_watch.metadata.anilist import AniListClient
 from ani_watch.services.anilist_sync import AniListSyncService
 from ani_watch.services.library import LibraryService
 from ani_watch.storage.database import Database
@@ -21,8 +25,10 @@ app = typer.Typer(
 
 db_app = typer.Typer(help="Database administration commands.")
 auth_app = typer.Typer(help="AniList authentication and sync commands.")
+telegram_app = typer.Typer(help="Telegram personal media commands.")
 app.add_typer(db_app, name="db")
 app.add_typer(auth_app, name="auth")
+app.add_typer(telegram_app, name="telegram")
 
 
 @app.command()
@@ -33,6 +39,11 @@ def doctor() -> None:
     typer.echo(f"Database: {settings.database_url}")
     typer.echo("VLC: available through python-vlc when the native VLC runtime is installed.")
     typer.echo("Redis: optional")
+    typer.echo(
+        "Telegram: configured"
+        if settings.telegram_api_id and settings.telegram_channel
+        else "Telegram: not configured"
+    )
 
 
 @auth_app.command("login")
@@ -198,6 +209,116 @@ def auth_sync(
         typer.echo(f"Pulled {pulled} progress item(s) into the local library.")
     if push:
         typer.echo(f"Pushed {pushed} local media item(s) to AniList.")
+
+
+@telegram_app.command("configure")
+def telegram_configure(
+    api_id: int | None = typer.Option(None, "--api-id", min=1),
+    channel: str | None = typer.Option(None, "--channel"),
+) -> None:
+    """Configure Telegram API credentials and the authorized media channel."""
+    settings = SettingsStore().load()
+    resolved_api_id = api_id or settings.telegram_api_id
+    resolved_channel = channel or settings.telegram_channel
+
+    if resolved_api_id is None:
+        resolved_api_id = typer.prompt("Telegram API ID", type=int)
+    if resolved_channel is None:
+        resolved_channel = typer.prompt("Telegram channel username or ID")
+
+    api_hash = typer.prompt(
+        "Telegram API hash",
+        hide_input=True,
+    )
+    if not api_hash.strip():
+        typer.echo("Telegram API hash cannot be empty.", err=True)
+        raise typer.Exit(code=2)
+
+    settings.telegram_api_id = resolved_api_id
+    settings.telegram_channel = resolved_channel.strip()
+    TelegramCredentialStore().save_api_hash(api_hash)
+    SettingsStore().save(settings)
+
+    typer.echo("Telegram configuration saved. API hash stored in the OS credential store.")
+    typer.echo("Run 'ani-watch telegram login' to authorize the Telegram account.")
+
+
+@telegram_app.command("login")
+def telegram_login(
+    phone: str | None = typer.Option(None, "--phone", help="Telegram phone number in international format."),
+) -> None:
+    """Authorize the local Telegram MTProto session."""
+    settings = SettingsStore().load()
+    account = TelegramAccountService(settings)
+    try:
+        asyncio.run(account.login(phone=phone))
+    except AuthenticationError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=2) from exc
+    finally:
+        asyncio.run(account.close())
+    typer.echo("Telegram login successful. Session stored locally and kept out of the repository.")
+
+
+@telegram_app.command("status")
+def telegram_status() -> None:
+    """Check Telegram configuration and the local authorization session."""
+    settings = SettingsStore().load()
+    credentials = TelegramCredentialStore()
+    configured = bool(
+        settings.telegram_api_id
+        and settings.telegram_channel
+        and credentials.get_api_hash()
+    )
+    if not configured:
+        typer.echo("Telegram: not configured. Run 'ani-watch telegram configure'.")
+        return
+
+    account = TelegramAccountService(settings, credential_store=credentials)
+    try:
+        authorized, identity = asyncio.run(account.status())
+    except AuthenticationError:
+        typer.echo("Telegram: configured but not authorized. Run 'ani-watch telegram login'.")
+        return
+    except Exception as exc:
+        typer.echo(f"Telegram: unable to check account: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+    finally:
+        asyncio.run(account.close())
+
+    typer.echo(f"Telegram: authorized as {identity or 'unknown account'}.")
+    typer.echo(f"Channel: {settings.telegram_channel}")
+
+
+@telegram_app.command("sync")
+def telegram_sync(
+    limit: int = typer.Option(100, "--limit", min=1, max=10000),
+) -> None:
+    """List authorized Telegram media visible to Ani-Watch."""
+    settings = SettingsStore().load()
+    provider = __import__(
+        "ani_watch.providers.telegram",
+        fromlist=["TelegramMediaProvider"],
+    ).TelegramMediaProvider(settings)
+    try:
+        items = asyncio.run(provider.list_media(limit=limit))
+    except Exception as exc:
+        typer.echo(f"Telegram media scan failed: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+    finally:
+        asyncio.run(provider.close())
+
+    if not items:
+        typer.echo("No Telegram media found.")
+        return
+
+    for item in items:
+        duration = item["duration_seconds"]
+        duration_text = f", {duration}s" if duration is not None else ""
+        typer.echo(
+            f"message={item['message_id']} | {item['filename']} | "
+            f"{item['size']} bytes{duration_text} | {item['mime_type']}"
+        )
 
 
 @db_app.command("upgrade")
