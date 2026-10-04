@@ -6,6 +6,7 @@ from ani_watch.config.settings import AppSettings
 from ani_watch.domain.errors import ConfigurationError
 from ani_watch.providers.local import LocalFileProvider
 from ani_watch.providers.online import DirectUrlProvider
+from ani_watch.providers.streamlink import StreamlinkProvider
 from ani_watch.providers.registry import ProviderRegistry
 
 
@@ -24,6 +25,12 @@ def build_provider_registry(settings: AppSettings) -> ProviderRegistry:
 
     if settings.playback.local_first and local_root is not None:
         registry.register(LocalFileProvider(local_root))
+
+    if settings.streamlink_url_template:
+        try:
+            registry.register(StreamlinkProvider(settings.streamlink_url_template))
+        except ValueError as exc:
+            raise ConfigurationError(str(exc)) from exc
 
     if settings.online_media_url_template:
         try:
