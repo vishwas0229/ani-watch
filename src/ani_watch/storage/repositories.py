@@ -188,7 +188,6 @@ class HistoryRepository:
             for record, anime_title, episode_title in rows
         ]
 
-
     def has_recent_completion(self, anime_id: int, episode_number: int) -> bool:
         """Return whether this episode already has a recorded completion."""
         with self.db.session() as session:
@@ -202,6 +201,7 @@ class HistoryRepository:
                 )
                 .limit(1)
             ) is not None
+
 
 class ProgressRepository:
     """Persist playback position and completion state."""
