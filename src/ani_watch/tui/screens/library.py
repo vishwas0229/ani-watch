@@ -5,6 +5,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
+from ani_watch.services.library import LibraryService
 from ani_watch.domain.models import (
     ContinueWatchingItem,
     LibrarySnapshot,
@@ -38,9 +39,16 @@ class LibraryScreen(Screen[None]):
 
     BINDINGS = [("escape", "go_back", "Back")]
 
-    def __init__(self, snapshot: LibrarySnapshot | None = None) -> None:
+    def __init__(
+        self,
+        snapshot: LibrarySnapshot | None = None,
+        *,
+        library_service: LibraryService | None = None,
+    ) -> None:
         super().__init__()
         self.snapshot = snapshot or LibrarySnapshot()
+        self.library_service = library_service
+        self._load_from_storage = snapshot is None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="library-page"):
@@ -82,6 +90,63 @@ class LibraryScreen(Screen[None]):
                 yield Button("Refresh", id="refresh")
                 yield Button("Back", id="back")
 
+    def on_mount(self) -> None:
+        """Load the latest persisted library state when no snapshot was supplied."""
+        if self._load_from_storage:
+            self.refresh()
+
+    def refresh(self) -> None:
+        """Re-query persistent state and rebuild the library dashboard."""
+        service = self.library_service or getattr(self.app, "library_service", None)
+        if service is None and hasattr(self.app, "get_library_service"):
+            try:
+                service = self.app.get_library_service()
+            except Exception as exc:
+                self.query_one("#library-summary", Static).update(
+                    f"Unable to load library: {exc}"
+                )
+                return
+        if service is None:
+            self.query_one("#library-summary", Static).update("Library service is unavailable.")
+            return
+
+        self.library_service = service
+        self.snapshot = LibrarySnapshot(
+            continue_watching=tuple(service.continue_watching(20)),
+            recently_watched=tuple(service.recently_completed(20)),
+            watched_episodes=service.statistics()["watched_episodes"],
+            favorites=service.statistics()["favorites"],
+        )
+        self._rerender()
+
+    def _rerender(self) -> None:
+        """Refresh all library widgets from the current snapshot."""
+        self.query_one("#library-summary", Static).update(self._summary())
+        continue_list = self.query_one("#continue-list", VerticalScroll)
+        recent_list = self.query_one("#recent-list", VerticalScroll)
+
+        for child in list(continue_list.children):
+            child.remove()
+        for child in list(recent_list.children):
+            child.remove()
+
+        if self.snapshot.continue_watching:
+            for item in self.snapshot.continue_watching:
+                continue_list.mount(
+                    Button(
+                        self._continue_label(item),
+                        classes="library-item",
+                    )
+                )
+        else:
+            continue_list.mount(Static("Nothing in progress yet.", id="continue-empty"))
+
+        if self.snapshot.recently_watched:
+            for item in self.snapshot.recently_watched:
+                recent_list.mount(Static(self._recent_label(item), classes="library-item"))
+        else:
+            recent_list.mount(Static("No watch history yet.", id="recent-empty"))
+
     def _summary(self) -> str:
         return f"{self.snapshot.watched_episodes} watched • {self.snapshot.favorites} favorites"
 
@@ -98,7 +163,7 @@ class LibraryScreen(Screen[None]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "refresh":
-            self.query_one("#library-summary", Static).update(self._summary())
+            self.refresh()
         elif event.button.id == "back":
             self.app.pop_screen()
 
