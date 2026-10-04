@@ -127,15 +127,7 @@ class FavoritesScreen(Screen[None]):
     def on_mount(self) -> None:
         """Load persisted favorites when no explicit snapshot was supplied."""
         if self._load_from_storage:
-            service = self.library_service or getattr(self.app, "library_service", None)
-            if service is None and hasattr(self.app, "get_library_service"):
-                try:
-                    service = self.app.get_library_service()
-                except Exception as exc:
-                    self.query_one("#favorites-status", Static).update(
-                        f"Unable to load favorites: {exc}"
-                    )
-                    return
+            service = self.library_service
             if service is not None:
                 self.library_service = service
                 self.favorites = service.favorite_entries()
