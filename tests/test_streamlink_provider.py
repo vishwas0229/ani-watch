@@ -40,6 +40,7 @@ async def test_streamlink_provider_resolves_requested_quality(monkeypatch) -> No
 
 
 async def test_streamlink_provider_prefers_best_for_auto(monkeypatch) -> None:
+    provider = StreamlinkProvider("https://service.example/watch/{episode}")
     monkeypatch.setattr(
         streamlink_provider.streamlink,
         "streams",
@@ -92,14 +93,12 @@ def test_streamlink_provider_rejects_unknown_placeholders() -> None:
         StreamlinkProvider("https://service.example/{server}/{episode}")
 
 
-async def test_streamlink_provider_resolve_url_uses_instance(monkeypatch) -> None:
+async def test_streamlink_provider_resolve_url_uses_class_method(monkeypatch) -> None:
     monkeypatch.setattr(
         streamlink_provider.streamlink,
         "streams",
         lambda url: {"best": type("Stream", (), {"url": "https://cdn.example/episode.m3u8"})()},
     )
-    provider = StreamlinkProvider("https://service.example/watch/{episode}")
-
     candidate = await StreamlinkProvider.resolve_url(
         "https://service.example/watch/1",
         quality="auto",
