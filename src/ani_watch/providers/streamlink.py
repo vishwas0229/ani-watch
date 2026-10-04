@@ -124,38 +124,39 @@ class StreamlinkProvider:
             return False
         return streamlink is not None
 
-    async def resolve(
+    @staticmethod
+    async def resolve_url(
         self,
-        anime: AnimeRef,
-        episode: EpisodeRef,
+        source_url: str,
         *,
         quality: str | None = None,
-    ) -> MediaCandidate | None:
-        """Resolve a supported streaming page into a VLC-playable URL."""
+    ) -> MediaCandidate:
+        """Resolve one already-discovered online URL through Streamlink."""
         if streamlink is None:
             raise ProviderError(
                 "Streamlink is not installed. Reinstall Ani-Watch with its current dependencies."
             )
 
-        source_url = self._render(anime, episode, quality)
+        source_url = source_url.strip()
+        parsed = urlparse(source_url)
+        if parsed.scheme not in self._allowed_schemes or not parsed.netloc:
+            raise ProviderError("Streamlink source URL must use a valid http or https URL.")
+
         try:
             streams = await asyncio.to_thread(streamlink.streams, source_url)
         except Exception as exc:
             raise ProviderError(
-                f"Streamlink could not resolve the configured URL: {exc}"
+                f"Streamlink could not resolve the online source: {exc}"
             ) from exc
 
         selected_name, selected = self._pick_stream(streams, quality)
         if selected is None:
-            raise ProviderError(
-                "Streamlink found no playable streams for the configured URL."
-            )
+            raise ProviderError("Streamlink found no playable streams for the online source.")
 
         playable_url = getattr(selected, "url", None)
         if not isinstance(playable_url, str) or not playable_url:
             raise ProviderError(
-                "Streamlink returned a stream type that cannot be passed directly to VLC. "
-                "Use a direct HLS/HTTP media URL or another supported Streamlink stream."
+                "Streamlink returned a stream type that cannot be passed directly to VLC."
             )
 
         return MediaCandidate(
@@ -163,3 +164,13 @@ class StreamlinkProvider:
             provider=self.name,
             quality=selected_name,
         )
+
+    async def resolve(
+        self,
+        anime: AnimeRef,
+        episode: EpisodeRef,
+        *,
+        quality: str | None = None,
+    ) -> MediaCandidate | None:
+        """Resolve a configured streaming URL into a VLC-playable URL."""
+        return await self.resolve_url(self._render(anime, episode, quality), quality=quality)

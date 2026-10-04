@@ -1,5 +1,6 @@
 from textual.widgets import Button
 
+from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import EpisodeItem
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
@@ -128,6 +129,9 @@ async def test_episode_screen_escape_returns_home() -> None:
 
 
 async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
+    async def fail_resolve_url(source_url: str, *, quality: str | None = None):
+        raise ProviderError("unsupported source")
+
     class FakeMetadataService:
         async def streaming_episodes(self, anime_id: int):
             assert anime_id == 100
@@ -142,6 +146,10 @@ async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
             }
 
     opened = []
+    monkeypatch.setattr(
+        "ani_watch.tui.screens.episodes.StreamlinkProvider.resolve_url",
+        fail_resolve_url,
+    )
     monkeypatch.setattr(
         "ani_watch.tui.screens.episodes.webbrowser.open",
         lambda url: opened.append(url) or True,

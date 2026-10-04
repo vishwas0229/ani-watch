@@ -20,6 +20,8 @@ The project intentionally does not implement DRM bypassing or unauthorized copyr
 
 ## Online watching
 
+When no explicitly configured online provider is available, the TUI first tries the legal episode links from AniList through Streamlink. A successfully resolved HTTP/HLS stream is sent to VLC; if none can be resolved, Ani-Watch falls back to opening the first official link in the browser.
+
 Ani-Watch has two online-provider paths:
 
 1. **Streamlink** accepts a configured streaming page or direct stream URL and resolves supported services/protocols into a playable stream. Streamlink provides a plugin system for supported services and supports direct HLS/DASH/HTTP stream protocols. VOD support varies by service, because Streamlink primarily targets streaming services and has limited VOD coverage.

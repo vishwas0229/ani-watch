@@ -11,6 +11,7 @@ from textual.widgets import Button, Label, Static
 from ani_watch.domain.errors import AniWatchError, OfflineError, ProviderError
 from ani_watch.domain.models import AnimeRef, EpisodeItem
 from ani_watch.metadata.cached import CachedMetadataService
+from ani_watch.providers.streamlink import StreamlinkProvider
 from ani_watch.services.playback import PlaybackSession
 
 
@@ -366,6 +367,41 @@ class EpisodeScreen(Screen[None]):
             )
             return
 
+        anime = AnimeRef(anilist_id=self.anime_id, title=self.anime_title)
+        quality = getattr(self.app.settings.playback, "quality", "auto")
+        for selected in links:
+            url = selected["url"]
+            try:
+                candidate = await StreamlinkProvider.resolve_url(url, quality=quality)
+            except ProviderError:
+                continue
+
+            try:
+                self._session().start_candidate(
+                    anime,
+                    self.episodes[self._selected_index],
+                    candidate,
+                    episode_index=self._selected_index,
+                    total_episodes=len(self.episodes),
+                )
+            except AniWatchError as exc:
+                status.update(str(exc))
+                return
+            except Exception:
+                status.update(
+                    f"Unable to start Episode {episode_number} in VLC. "
+                    "Check VLC/libVLC availability."
+                )
+                return
+
+            if self._playback_timer is None:
+                self._playback_timer = self.set_interval(1, self._poll_playback)
+            status.update(
+                f"Playing Episode {episode_number} via Streamlink in VLC. "
+                "Progress and resume are saved locally."
+            )
+            return
+
         selected = links[0]
         url = selected["url"]
         try:
@@ -377,7 +413,10 @@ class EpisodeScreen(Screen[None]):
             return
 
         site = selected.get("site") or "online provider"
-        status.update(f"Opened Episode {episode_number} on {site} in your default browser.")
+        status.update(
+            f"Streamlink could not resolve a VLC-playable stream; opened Episode "
+            f"{episode_number} on {site} in your browser."
+        )
 
     def _provider_names(self) -> tuple[str, ...]:
         """Return the configured provider names when available."""
