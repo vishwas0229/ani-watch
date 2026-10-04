@@ -19,6 +19,20 @@ class FakeOnlineProvider:
         )
 
 
+class FakeStreamlinkProvider:
+    name = "streamlink"
+
+    async def available(self, anime, episode) -> bool:
+        return True
+
+    async def resolve(self, anime, episode, *, quality=None) -> MediaCandidate:
+        return MediaCandidate(
+            uri="https://media.example/streamlink-episode.m3u8",
+            provider="streamlink",
+            quality=quality,
+        )
+
+
 class FakeSession:
     def __init__(self, resolver) -> None:
         self.resolver = resolver
@@ -76,5 +90,36 @@ async def test_watch_online_uses_direct_provider_when_configured() -> None:
 
         assert session.provider_names == ["online"]
         assert "Playing Episode 1 via online" in str(
+            app.screen.query_one("#episode-status").content
+        )
+
+
+async def test_watch_online_prefers_streamlink_when_both_are_configured() -> None:
+    resolver = type(
+        "Resolver",
+        (),
+        {
+            "providers": ProviderRegistry(
+                [FakeOnlineProvider(), FakeStreamlinkProvider()]
+            )
+        },
+    )()
+    session = FakeSession(resolver)
+    app = AniWatchApp(provider_resolver=resolver, playback_session=session)
+
+    async with app.run_test() as pilot:
+        await app.push_screen(
+            EpisodeScreen(
+                "Sample Anime",
+                (EpisodeItem(number=1, title="Episode 1"),),
+                anime_id=100,
+                playback_session=session,
+            )
+        )
+        await pilot.click("#watch-online")
+        await pilot.pause()
+
+        assert session.provider_names == ["streamlink"]
+        assert "Playing Episode 1 via streamlink" in str(
             app.screen.query_one("#episode-status").content
         )
