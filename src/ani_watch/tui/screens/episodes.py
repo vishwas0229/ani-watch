@@ -265,6 +265,14 @@ class EpisodeScreen(Screen[None]):
         """Select the previous available episode."""
         self._move_selection(-1)
 
+    def _provider_names(self) -> tuple[str, ...]:
+        """Return the configured provider names when available."""
+        try:
+            resolver = self._session().resolver
+            return tuple(resolver.providers.names)
+        except Exception:
+            return ()
+
     def _session(self) -> PlaybackSession:
         """Return the injected or application-owned playback session."""
         if self.playback_session is not None:
@@ -292,6 +300,14 @@ class EpisodeScreen(Screen[None]):
         if self.anime_id is None:
             self.query_one("#episode-status", Static).update(
                 "Playback is unavailable because the anime identifier is missing."
+            )
+            return
+
+        provider_names = self._provider_names()
+        if not provider_names:
+            self.query_one("#episode-status", Static).update(
+                "No playback provider is configured. Open Settings and set Local media "
+                "to a folder containing authorized/user-owned episode files."
             )
             return
 
