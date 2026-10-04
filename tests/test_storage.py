@@ -125,3 +125,17 @@ def test_continue_watching_projection_includes_anime_title(tmp_path: Path) -> No
     assert item.episode_number == 8
     assert item.position_seconds == 300
     assert item.duration_seconds == 1200
+
+def test_completion_history_is_idempotent(tmp_path: Path) -> None:
+    db = make_db(tmp_path)
+    AnimeRepository(db).upsert(AnimeDetails(anilist_id=6, title="Completed Anime"))
+
+    service = __import__("ani_watch.services.library", fromlist=["LibraryService"]).LibraryService(db)
+    service.save_progress(6, 1, 1200, 1200)
+    service.save_progress(6, 1, 1200, 1200)
+
+    rows = HistoryRepository(db).list_recent_entries()
+    assert len(rows) == 1
+    assert rows[0].anime_id == 6
+    assert rows[0].episode_number == 1
+\n
