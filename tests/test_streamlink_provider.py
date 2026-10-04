@@ -102,7 +102,7 @@ async def test_streamlink_provider_resolve_url_uses_instance(monkeypatch) -> Non
     )
     provider = StreamlinkProvider("https://service.example/watch/{episode}")
 
-    candidate = await provider.resolve_url(
+    candidate = await StreamlinkProvider.resolve_url(
         "https://service.example/watch/1",
         quality="auto",
     )
