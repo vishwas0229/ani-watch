@@ -52,3 +52,22 @@ def test_telegram_provider_normalizes_titles() -> None:
 def test_telegram_provider_extracts_episode_labels() -> None:
     assert TelegramMediaProvider._episode_number("Episode 07.mp4") == 7
     assert TelegramMediaProvider._episode_number("ep-3-final.mp4") == 3
+
+
+def test_telegram_provider_rejects_non_video_media() -> None:
+    from types import SimpleNamespace
+
+    photo = SimpleNamespace(
+        id=1,
+        text="Example Anime Episode 1",
+        raw_text="Example Anime Episode 1",
+        video=None,
+        file=SimpleNamespace(
+            name="cover.jpg",
+            size=123,
+            mime_type="image/jpeg",
+            duration=None,
+        ),
+    )
+
+    assert not TelegramMediaProvider._is_streamable_media(photo)
