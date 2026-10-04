@@ -132,13 +132,7 @@ class HistoryScreen(Screen[None]):
     def on_mount(self) -> None:
         """Load persisted history when no explicit entries were supplied."""
         if self._load_from_storage:
-            service = self.library_service or getattr(self.app, "library_service", None)
-            if service is None and hasattr(self.app, "get_library_service"):
-                try:
-                    service = self.app.get_library_service()
-                except Exception as exc:
-                    self.query_one("#history-status", Static).update(f"Unable to load history: {exc}")
-                    return
+            service = self.library_service
             if service is not None:
                 self.library_service = service
                 self.entries = tuple(service.recently_watched(50))
