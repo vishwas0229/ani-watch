@@ -1,5 +1,7 @@
 from textual.widgets import Button
 
+from ani_watch.metadata.cache import MemoryCache
+from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.domain.models import EpisodeItem
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
@@ -125,3 +127,43 @@ async def test_episode_screen_escape_returns_home() -> None:
         await pilot.pause()
 
         assert not isinstance(app.screen, EpisodeScreen)
+
+
+
+async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
+    class FakeMetadataService:
+        async def streaming_episodes(self, anime_id: int):
+            assert anime_id == 100
+            return {
+                1: [
+                    {
+                        "title": "Episode 1",
+                        "url": "https://example.com/watch/1",
+                        "site": "Example",
+                    }
+                ]
+            }
+
+    opened = []
+    monkeypatch.setattr(
+        "ani_watch.tui.screens.episodes.webbrowser.open",
+        lambda url: opened.append(url) or True,
+    )
+
+    app = AniWatchApp()
+    async with app.run_test() as pilot:
+        await app.push_screen(
+            EpisodeScreen(
+                "Sample Anime",
+                (EpisodeItem(number=1, title="Episode 1"),),
+                anime_id=100,
+                metadata_service=FakeMetadataService(),
+            )
+        )
+        await pilot.click("#watch-online")
+        await pilot.pause()
+
+        assert opened == ["https://example.com/watch/1"]
+        assert "Opened Episode 1 on Example" in str(
+            app.screen.query_one("#episode-status").content
+        )
