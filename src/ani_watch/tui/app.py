@@ -224,16 +224,22 @@ class AniWatchApp(App[None]):
         self.push_screen(SearchScreen(metadata_service=self.metadata_service))
 
     def action_show_history(self) -> None:
-        """Open the watch history screen."""
-        self.push_screen(HistoryScreen())
+        """Open the watch history screen with shared persistence services."""
+        self.push_screen(
+            HistoryScreen(
+                library_service=self.get_library_service(),
+                playback_session=self.playback_session,
+                metadata_service=self.metadata_service,
+            )
+        )
 
     def action_show_favorites(self) -> None:
-        """Open the favorites screen."""
-        self.push_screen(FavoritesScreen())
+        """Open favorites using the shared persistence service."""
+        self.push_screen(FavoritesScreen(library_service=self.get_library_service()))
 
     def action_show_library(self) -> None:
-        """Open the library screen."""
-        self.push_screen(LibraryScreen())
+        """Open the library using the shared persistence service."""
+        self.push_screen(LibraryScreen(library_service=self.get_library_service()))
 
     def action_show_settings(self) -> None:
         """Open the settings screen."""
