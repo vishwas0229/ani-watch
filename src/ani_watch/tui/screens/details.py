@@ -138,10 +138,12 @@ class AnimeDetailsScreen(Screen[None]):
         """Persist loaded metadata and restore its favorite state."""
         if self.anime is None:
             return
+        service = self.library_service or getattr(self.app, "library_service", None)
+        if service is None:
+            return
         try:
-            library = self._library()
-            library.anime.upsert(self.anime)
-            stored = library.anime.get(self.anime.anilist_id)
+            service.anime.upsert(self.anime)
+            stored = service.anime.get(self.anime.anilist_id)
         except Exception:
             return
         if stored is not None:
