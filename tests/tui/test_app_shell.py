@@ -1,7 +1,12 @@
+from pathlib import Path
+
 from textual.widgets import Button, Label, Static
 
 from ani_watch.config.settings import AppSettings
+from ani_watch.domain.models import AnimeDetails
 from ani_watch.metadata.cache import RedisCache
+from ani_watch.services.library import LibraryService
+from ani_watch.storage.database import Database
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.favorites import FavoritesScreen
 from ani_watch.tui.screens.history import HistoryScreen
@@ -72,6 +77,43 @@ async def test_home_favorites_binding_opens_favorites_screen() -> None:
         await pilot.press("f")
         await pilot.pause()
         assert isinstance(app.screen, FavoritesScreen)
+
+
+async def test_keyboard_library_shortcuts_use_shared_persistence(tmp_path: Path) -> None:
+    database = Database(f"sqlite:///{tmp_path / 'shortcut.db'}")
+    database.create_schema()
+    library = LibraryService(database)
+
+    library.anime.upsert(AnimeDetails(anilist_id=500, title="Shortcut Anime", episodes=2))
+    library.favorite(500)
+    library.save_progress(500, 1, 30, 120)
+
+    app = AniWatchApp(
+        settings=AppSettings(database_url=f"sqlite:///{tmp_path / 'shortcut.db'}"),
+        library_service=library,
+        database=database,
+    )
+
+    async with app.run_test() as pilot:
+        await pilot.press("f")
+        await pilot.pause()
+        assert isinstance(app.screen, FavoritesScreen)
+        assert app.screen.query_one("#favorites-summary").content == "1 favorite"
+        await pilot.press("escape")
+        await pilot.pause()
+
+        await pilot.press("r")
+        await pilot.pause()
+        assert isinstance(app.screen, HistoryScreen)
+        assert app.screen.query_one("#history-summary").content == "0 watched episodes"
+        await pilot.press("escape")
+        await pilot.pause()
+
+        await pilot.press("l")
+        await pilot.pause()
+        assert app.screen.query_one("#library-summary").content == "0 watched • 1 favorites"
+
+    database.dispose()
 
 
 async def test_quit_button_exits_app() -> None:

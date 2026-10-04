@@ -48,6 +48,7 @@ class AnimeMetadataService:
     async def episode_items(self, anime_id: int) -> list[EpisodeItem]:
         """Return stable episode rows from AniList metadata."""
         first_page = await self.client.episodes(anime_id, page=1, limit=25)
+        status = self._text(first_page.get("status"))
         total = self._int(first_page.get("episodes"))
         duration = self._int(first_page.get("duration"))
 
@@ -59,7 +60,7 @@ class AnimeMetadataService:
         has_next = bool((schedule.get("pageInfo") or {}).get("hasNextPage"))
 
         page = 2
-        while total is None and has_next:
+        while has_next:
             next_page = await self.client.episodes(anime_id, page=page, limit=25)
             next_schedule = next_page.get("airingSchedule") or {}
             if not isinstance(next_schedule, dict):
@@ -71,8 +72,12 @@ class AnimeMetadataService:
 
         if total is not None and total > 0:
             numbers = range(1, total + 1)
+            available_numbers = (
+                set(numbers) if status == "FINISHED" or len(scheduled) >= total else scheduled
+            )
         else:
             numbers = sorted(scheduled)
+            available_numbers = set(numbers)
 
         return [
             EpisodeItem(
@@ -81,7 +86,7 @@ class AnimeMetadataService:
                 # stable per-episode title in this mapping.
                 title=None,
                 duration_minutes=duration,
-                available=True,
+                available=number in available_numbers,
             )
             for number in numbers
             if number > 0
