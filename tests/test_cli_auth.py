@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 from typer.testing import CliRunner
 
@@ -33,7 +31,7 @@ class FakeAccount:
 
 
 @pytest.fixture
-def conda(monkeypatch):
+def conda(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("CONDA_PREFIX", "/opt/conda/envs/ani-watch")
 
 
