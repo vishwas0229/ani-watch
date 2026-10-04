@@ -22,6 +22,7 @@ async def test_settings_screen_renders_controls() -> None:
             assert app.screen.query_one("#density")
             assert app.screen.query_one("#quality")
             assert app.screen.query_one("#auto-next")
+            assert app.screen.query_one("#local-media-root")
             assert app.screen.query_one("#save")
 
             save = app.screen.query_one("#save", Button)
@@ -70,3 +71,25 @@ async def test_settings_screen_shows_anilist_account_state(monkeypatch) -> None:
         assert app.screen.query_one("#anilist-account").content == (
             "AniList account: signed in (token stored securely)."
         )
+
+
+async def test_settings_save_local_media_root_updates_provider_state(tmp_path: Path) -> None:
+    app = AniWatchApp()
+    store = SettingsStore(tmp_path / "config.toml")
+
+    async with app.run_test() as pilot:
+        await app.push_screen(SettingsScreen(store=store))
+        await pilot.pause()
+
+        root = app.screen.query_one("#local-media-root")
+        root.value = str(tmp_path)
+        await pilot.pause()
+
+        save = app.screen.query_one("#save", Button)
+        save.focus()
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.settings.local_media_root == tmp_path
+        assert "local media ready" in str(app.screen.query_one("#provider-status").content)
+        assert app.provider_resolver is None
