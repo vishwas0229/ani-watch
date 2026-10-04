@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ani_watch.config.settings import AppSettings
-from ani_watch.domain.models import AnimeDetails, EpisodeItem
+from ani_watch.domain.models import AnimeDetails, EpisodeItem, WatchHistoryEntry
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.registry import ProviderRegistry
 from ani_watch.providers.resilience import ProviderResolver
@@ -161,6 +161,52 @@ async def test_details_to_episodes_to_playback_persists_progress_and_auto_next(
         assert history[0].episode_number == 1
         assert app.screen.query_one("#episode-1").has_class("selected")
         assert player.loaded[-1].endswith("episode-2.mp4")
+
+    database.dispose()
+
+
+async def test_history_resume_reuses_saved_position_and_auto_next(tmp_path: Path) -> None:
+    app, database, player = build_app(tmp_path)
+    library = app.library_service
+    assert library is not None
+
+    library.progress.save(100, 1, 30, 120)
+    library.history.record(
+        WatchHistoryEntry(
+            anime_id=100,
+            anime_title="Sample Anime",
+            episode_number=1,
+            episode_title="One",
+            progress_seconds=30,
+            duration_seconds=120,
+        )
+    )
+
+    async with app.run_test() as pilot:
+        await pilot.push_screen(
+            HistoryScreen(
+                library_service=library,
+                playback_session=app.playback_session,
+                metadata_service=app.metadata_service,
+            )
+        )
+        await pilot.pause()
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert player.loaded[-1].endswith("episode-1.mp4")
+        assert player.position == 30_000
+        assert player.playing is True
+
+        player.position = player.duration
+        player.playing = False
+        app.screen._save_progress()
+        await pilot.pause()
+
+        assert player.loaded[-1].endswith("episode-2.mp4")
+        assert player.playing is True
+        assert library.recently_watched(10)[0].episode_number == 1
 
     database.dispose()
 
