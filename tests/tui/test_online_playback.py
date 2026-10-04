@@ -49,6 +49,9 @@ class FakeSession:
     def stop(self) -> None:
         return
 
+    def close(self) -> None:
+        return
+
 
 async def test_watch_online_uses_direct_provider_when_configured() -> None:
     resolver = type(
