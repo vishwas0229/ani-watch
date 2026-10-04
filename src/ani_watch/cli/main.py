@@ -4,8 +4,8 @@ import asyncio
 
 import typer
 
-from ani_watch.config.runtime import CondaEnvironmentError, require_conda_environment
 from ani_watch.auth.anilist import AniListAccountService
+from ani_watch.config.runtime import CondaEnvironmentError, require_conda_environment
 from ani_watch.config.settings import AppSettings
 from ani_watch.domain.errors import AuthenticationError, ConfigurationError
 from ani_watch.services.anilist_sync import AniListSyncService
