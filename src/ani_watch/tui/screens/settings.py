@@ -230,7 +230,6 @@ class SettingsScreen(Screen[None]):
 
         self.store.save(self.settings)
         app = self.app
-        app.settings = self.settings
         if hasattr(app, "settings"):
             app.settings = self.settings
         if getattr(app, "provider_resolver", None) is not None:
