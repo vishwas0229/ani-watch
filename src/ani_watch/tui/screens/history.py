@@ -7,7 +7,9 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.models import WatchHistoryEntry
+from ani_watch.domain.models import AnimeRef, EpisodeItem, WatchHistoryEntry
+from ani_watch.services.library import LibraryService
+from ani_watch.services.playback import PlaybackSession
 
 
 class HistoryScreen(Screen[None]):
@@ -80,10 +82,20 @@ class HistoryScreen(Screen[None]):
         ("enter", "resume_selected", "Resume"),
     ]
 
-    def __init__(self, entries: Sequence[WatchHistoryEntry] = ()) -> None:
+    def __init__(
+        self,
+        entries: Sequence[WatchHistoryEntry] = (),
+        *,
+        library_service: LibraryService | None = None,
+        playback_session: PlaybackSession | None = None,
+    ) -> None:
         super().__init__()
         self.entries = tuple(entries)
+        self.library_service = library_service
+        self.playback_session = playback_session
+        self._load_from_storage = not bool(entries)
         self._selected_index = 0
+        self._playback_timer = None
 
     def compose(self) -> ComposeResult:
         """Render recent watch-history entries."""
@@ -117,8 +129,14 @@ class HistoryScreen(Screen[None]):
                 )
                 yield Button("Back", id="back")
 
-    def on_mount(self) -> None:
-        """Focus the first history entry when available."""
+    async def on_mount(self) -> None:
+        """Load persisted history when no explicit entries were supplied."""
+        if self._load_from_storage:
+            service = self.library_service
+            if service is not None:
+                self.library_service = service
+                self.entries = tuple(service.recently_watched(50))
+                await self._rerender()
         self._focus_selected()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -138,6 +156,37 @@ class HistoryScreen(Screen[None]):
                 return
             self._select_index(index)
 
+    async def _rerender(self) -> None:
+        """Synchronize the mounted history rows with persisted state."""
+        history_list = self.query_one("#history-list", VerticalScroll)
+        await history_list.remove_children()
+
+        if not self.entries:
+            history_list.mount(
+                Static(
+                    "No watch history yet. Watched episodes will appear here "
+                    "after playback tracking is connected.",
+                    id="history-empty",
+                )
+            )
+        else:
+            for index, entry in enumerate(self.entries):
+                history_list.mount(
+                    Button(
+                        self._entry_label(entry),
+                        id=self._entry_id(index),
+                        classes=self._entry_classes(index),
+                    )
+                )
+
+        self.query_one("#history-summary", Static).update(self._summary())
+        self.query_one("#resume", Button).disabled = not bool(self.entries)
+        self.query_one("#history-status", Static).update(self._initial_status())
+        if self.entries:
+            self._selected_index = min(self._selected_index, len(self.entries) - 1)
+        else:
+            self._selected_index = 0
+
     def _summary(self) -> str:
         """Return a compact history count."""
         count = len(self.entries)
@@ -148,7 +197,7 @@ class HistoryScreen(Screen[None]):
     def _initial_status(self) -> str:
         """Return the initial state shown below the history list."""
         if not self.entries:
-            return "History storage will be connected in the PostgreSQL phase."
+            return "No persisted watch history yet."
         return "Select an entry and press Enter to resume from its saved position."
 
     @staticmethod
@@ -227,22 +276,83 @@ class HistoryScreen(Screen[None]):
         """Select the previous history entry."""
         self._move_selection(-1)
 
+    def _session(self) -> PlaybackSession:
+        """Return the injected or application-owned playback session."""
+        if self.playback_session is not None:
+            return self.playback_session
+        session = getattr(self.app, "playback_session", None)
+        if session is None and hasattr(self.app, "get_playback_session"):
+            session = self.app.get_playback_session()
+        if session is None:
+            raise RuntimeError("HistoryScreen requires a playback session.")
+        self.playback_session = session
+        return session
+
     def resume_selected(self) -> None:
-        """Prepare playback resume without coupling to the player adapter."""
+        """Resolve the selected history entry and resume its saved position."""
         if not self.entries:
             self.query_one("#history-status", Static).update("There is no history entry to resume.")
             return
+        if self.entries[self._selected_index].anime_id <= 0:
+            self.query_one("#history-status", Static).update(
+                "This history entry has no valid anime identifier."
+            )
+            return
 
+        self.query_one("#history-status", Static).update("Resolving saved playback…")
+        self.run_worker(self._resume_selected(), exclusive=True)
+
+    async def _resume_selected(self) -> None:
         entry = self.entries[self._selected_index]
-        self.query_one("#history-status", Static).update(
-            f"Resume requested for {entry.anime_title}, "
-            f"Episode {entry.episode_number}. "
-            "VLC resume integration will be connected in the playback phase."
+        duration_minutes = (
+            max(1, round(entry.duration_seconds / 60)) if entry.duration_seconds else None
         )
+        episode = EpisodeItem(
+            number=entry.episode_number,
+            title=entry.episode_title,
+            duration_minutes=duration_minutes,
+            watched=True,
+        )
+        try:
+            candidate = await self._session().start(
+                AnimeRef(anilist_id=entry.anime_id, title=entry.anime_title),
+                episode,
+                episode_index=0,
+                total_episodes=1,
+            )
+        except Exception as exc:
+            self.query_one("#history-status", Static).update(
+                f"Unable to resume Episode {entry.episode_number}: {exc}"
+            )
+            return
+
+        self.query_one("#history-status", Static).update(
+            f"Resumed {entry.anime_title} • Episode {entry.episode_number} "
+            f"via {candidate.provider}."
+        )
+        if self._playback_timer is None:
+            self._playback_timer = self.set_interval(1, self._save_progress)
+
+    def _save_progress(self) -> None:
+        if self.playback_session is not None and self.playback_session.active:
+            self.playback_session.save_progress()
+
+    def stop_playback(self) -> None:
+        """Persist the resume position and stop playback before leaving."""
+        if self._playback_timer is not None:
+            self._playback_timer.pause()
+            self._playback_timer = None
+        if self.playback_session is not None:
+            self.playback_session.stop()
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
+        self.stop_playback()
         self.app.pop_screen()
+
+    def on_unmount(self) -> None:
+        """Stop active playback when the history screen is removed."""
+        self.stop_playback()
 
     def action_next_entry(self) -> None:
         """Handle j keyboard navigation."""

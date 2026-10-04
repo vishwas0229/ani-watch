@@ -7,7 +7,11 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
+from ani_watch.domain.errors import AniWatchError
 from ani_watch.domain.models import AnimeDetails
+from ani_watch.metadata.cached import CachedMetadataService
+from ani_watch.services.library import LibraryService
+from ani_watch.tui.screens.episodes import EpisodeScreen
 
 
 class AnimeDetailsScreen(Screen[None]):
@@ -103,10 +107,48 @@ class AnimeDetailsScreen(Screen[None]):
         ("t", "toggle_favorite", "Favorite"),
     ]
 
-    def __init__(self, anime: AnimeDetails | None = None) -> None:
+    def __init__(
+        self,
+        anime: AnimeDetails | None = None,
+        *,
+        metadata_service: CachedMetadataService | None = None,
+        library_service: LibraryService | None = None,
+    ) -> None:
         super().__init__()
         self.anime = anime
+        self.metadata_service = metadata_service
+        self.library_service = library_service
         self._favorite = anime.is_favorite if anime is not None else False
+
+    def _metadata(self) -> CachedMetadataService:
+        service = self.metadata_service or getattr(self.app, "metadata_service", None)
+        if service is None:
+            raise RuntimeError("AnimeDetailsScreen requires an application metadata service.")
+        return service
+
+    def _library(self) -> LibraryService:
+        service = self.library_service or getattr(self.app, "library_service", None)
+        if service is None and hasattr(self.app, "get_library_service"):
+            service = self.app.get_library_service()
+        if service is None:
+            raise RuntimeError("AnimeDetailsScreen requires an application library service.")
+        return service
+
+    def on_mount(self) -> None:
+        """Persist loaded metadata and restore its favorite state."""
+        if self.anime is None:
+            return
+        service = self.library_service or getattr(self.app, "library_service", None)
+        if service is None:
+            return
+        try:
+            service.anime.upsert(self.anime)
+            stored = service.anime.get(self.anime.anilist_id)
+        except Exception:
+            return
+        if stored is not None:
+            self._favorite = stored.is_favorite
+            self.query_one("#favorite", Button).label = self._favorite_label()
 
     def compose(self) -> ComposeResult:
         """Render the anime details surface and its actions."""
@@ -239,7 +281,7 @@ class AnimeDetailsScreen(Screen[None]):
         if action == "back":
             self.app.pop_screen()
         elif action == "episodes":
-            self.notify("Episode selection will be connected in the Episode screen issue.")
+            self.open_episodes()
         elif action == "favorite":
             self.toggle_favorite()
 
@@ -248,14 +290,62 @@ class AnimeDetailsScreen(Screen[None]):
         self.app.pop_screen()
 
     def toggle_favorite(self) -> None:
-        """Toggle the selected anime's local favorite state."""
-        self._favorite = not self._favorite
+        """Persistently toggle the selected anime's favorite state."""
+        if self.anime is None:
+            return
+        previous = self._favorite
+        self._favorite = not previous
+        try:
+            library = self._library()
+            library.anime.upsert(self.anime)
+            if self._favorite:
+                library.favorite(self.anime.anilist_id)
+            else:
+                library.unfavorite(self.anime.anilist_id)
+        except Exception:
+            self._favorite = previous
+            self.query_one("#details-status", Static).update(
+                "Unable to update favorites. Check the local database and try again."
+            )
+            return
+
         favorite = self.query_one("#favorite", Button)
         favorite.label = self._favorite_label()
         state = "added to" if self._favorite else "removed from"
+        self.query_one("#details-status", Static).update(f"Anime {state} favorites.")
+
+    def open_episodes(self) -> None:
+        """Load episode metadata and open the playback-ready episode screen."""
+        if self.anime is None:
+            return
         self.query_one("#details-status", Static).update(
-            f"Anime {state} favorites locally. Persistence will be added "
-            "with the library/storage features."
+            f"Loading episodes for {self.anime.title}…"
+        )
+        self.run_worker(self._load_episodes(), exclusive=True)
+
+    async def _load_episodes(self) -> None:
+        if self.anime is None:
+            return
+        status = self.query_one("#details-status", Static)
+        try:
+            episodes = await self._metadata().episode_items(self.anime.anilist_id)
+        except AniWatchError as exc:
+            status.update(str(exc))
+            return
+        except Exception:
+            status.update("Unable to load episodes. Check your network connection.")
+            return
+
+        if not episodes:
+            status.update("No episode metadata is available for this anime.")
+            return
+
+        self.app.push_screen(
+            EpisodeScreen(
+                self.anime.title,
+                episodes,
+                anime_id=self.anime.anilist_id,
+            )
         )
 
     def action_toggle_favorite(self) -> None:

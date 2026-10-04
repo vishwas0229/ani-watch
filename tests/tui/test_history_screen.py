@@ -1,8 +1,23 @@
 from datetime import UTC, datetime
 
 from ani_watch.domain.models import WatchHistoryEntry
+from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.history import HistoryScreen
+
+
+class FakePlaybackSession:
+    active = False
+
+    async def start(self, anime, episode, *, episode_index=0, total_episodes=1):
+        self.active = True
+        return MediaCandidate(uri="file:///episode.mp4", provider="fake")
+
+    def save_progress(self) -> None:
+        return
+
+    def stop(self) -> None:
+        self.active = False
 
 
 def sample_history() -> tuple[WatchHistoryEntry, ...]:
@@ -30,7 +45,9 @@ async def test_history_screen_renders_entries() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await app.push_screen(HistoryScreen(sample_history()))
+        await app.push_screen(
+            HistoryScreen(sample_history(), playback_session=FakePlaybackSession())
+        )
         await pilot.pause()
 
         assert app.screen.query_one("#history-summary").content == ("2 watched episodes")
@@ -62,7 +79,9 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
-        await app.push_screen(HistoryScreen(sample_history()))
+        await app.push_screen(
+            HistoryScreen(sample_history(), playback_session=FakePlaybackSession())
+        )
         await pilot.pause()
 
         resume = app.screen.query_one("#resume")
@@ -70,9 +89,7 @@ async def test_history_resume_uses_provider_neutral_handoff() -> None:
         await pilot.press("enter")
         await pilot.pause()
 
-        assert "Resume requested for Sample Anime" in str(
-            app.screen.query_one("#history-status").content
-        )
+        assert "Resumed Sample Anime" in str(app.screen.query_one("#history-status").content)
 
 
 async def test_empty_history_disables_resume() -> None:

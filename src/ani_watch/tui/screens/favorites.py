@@ -8,6 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
 from ani_watch.domain.models import AnimeDetails, FavoriteAnime
+from ani_watch.services.library import LibraryService
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 
 
@@ -74,9 +75,16 @@ class FavoritesScreen(Screen[None]):
         ("o", "open_details", "Open"),
     ]
 
-    def __init__(self, favorites: Sequence[FavoriteAnime] = ()) -> None:
+    def __init__(
+        self,
+        favorites: Sequence[FavoriteAnime] = (),
+        *,
+        library_service: LibraryService | None = None,
+    ) -> None:
         super().__init__()
         self.favorites = list(favorites)
+        self.library_service = library_service
+        self._load_from_storage = not bool(favorites)
         self._selected_index = 0
 
     def compose(self) -> ComposeResult:
@@ -116,8 +124,14 @@ class FavoritesScreen(Screen[None]):
                 )
                 yield Button("Back", id="back")
 
-    def on_mount(self) -> None:
-        """Focus the first favorite when the screen opens."""
+    async def on_mount(self) -> None:
+        """Load persisted favorites when no explicit snapshot was supplied."""
+        if self._load_from_storage:
+            service = self.library_service
+            if service is not None:
+                self.library_service = service
+                self.favorites = service.favorite_entries()
+                await self._rerender()
         self._focus_selected()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -140,6 +154,35 @@ class FavoritesScreen(Screen[None]):
                 return
             self._select_index(index)
 
+    async def _rerender(self) -> None:
+        """Synchronize the mounted favorite rows with persisted state."""
+        favorites_list = self.query_one("#favorites-list", VerticalScroll)
+        await favorites_list.remove_children()
+
+        if not self.favorites:
+            favorites_list.mount(
+                Static(
+                    "No favorites yet. Add an anime from its details screen to build your library.",
+                    id="favorites-empty",
+                )
+            )
+        else:
+            for index, favorite in enumerate(self.favorites):
+                favorites_list.mount(
+                    Button(
+                        self._favorite_label(favorite),
+                        id=self._favorite_id(index),
+                        classes=self._favorite_classes(index),
+                    )
+                )
+
+        self.query_one("#favorites-summary", Static).update(self._summary())
+        self._refresh_action_state()
+        if self.favorites:
+            self._selected_index = min(self._selected_index, len(self.favorites) - 1)
+        else:
+            self._selected_index = 0
+
     def _summary(self) -> str:
         """Return a compact favorite count."""
         count = len(self.favorites)
@@ -148,7 +191,7 @@ class FavoritesScreen(Screen[None]):
     def _initial_status(self) -> str:
         """Return the empty or ready state message."""
         if not self.favorites:
-            return "Favorites persistence will be connected in the library/storage phase."
+            return "No persisted favorites yet."
         return "Select an anime and press Enter, o, or Open Details to view it."
 
     @staticmethod
@@ -216,7 +259,16 @@ class FavoritesScreen(Screen[None]):
             self.query_one("#favorites-status", Static).update("There is no favorite to remove.")
             return
 
-        removed = self.favorites.pop(self._selected_index)
+        removed = self.favorites[self._selected_index]
+        if self.library_service is not None:
+            try:
+                self.library_service.unfavorite(removed.anime_id)
+            except Exception:
+                self.query_one("#favorites-status", Static).update(
+                    "Unable to remove the favorite from persistent storage."
+                )
+                return
+        self.favorites.pop(self._selected_index)
         self._selected_index = max(0, min(self._selected_index, len(self.favorites) - 1))
 
         favorites_list = self.query_one("#favorites-list", VerticalScroll)
@@ -248,8 +300,7 @@ class FavoritesScreen(Screen[None]):
         self._refresh_action_state()
         self.query_one("#favorites-summary", Static).update(self._summary())
         self.query_one("#favorites-status", Static).update(
-            f"Removed {removed.title} from favorites locally. "
-            "Persistence will be added in the library/storage phase."
+            f"Removed {removed.title} from favorites."
         )
 
     def _refresh_action_state(self) -> None:

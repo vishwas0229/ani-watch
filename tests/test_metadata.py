@@ -3,6 +3,8 @@ import pytest
 
 from ani_watch.domain.errors import MetadataError, RateLimitError
 from ani_watch.metadata.anilist import AniListClient
+from ani_watch.metadata.cache import MemoryCache
+from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.metadata.service import AnimeMetadataService
 
 
@@ -174,6 +176,42 @@ async def test_anilist_episodes_page_through_schedule_when_count_unknown() -> No
 
     assert [episode.number for episode in episodes] == [1, 2, 27]
     assert all(episode.duration_minutes == 23 for episode in episodes)
+
+
+async def test_cached_metadata_service_caches_episode_items() -> None:
+    calls = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "Media": {
+                        "id": 9,
+                        "episodes": 2,
+                        "duration": 24,
+                        "airingSchedule": {
+                            "nodes": [{"episode": 1}, {"episode": 2}],
+                            "pageInfo": {"hasNextPage": False},
+                        },
+                    }
+                }
+            },
+        )
+
+    client = AniListClient(httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    service = CachedMetadataService(client, cache=MemoryCache())
+
+    first = await service.episode_items(9)
+    second = await service.episode_items(9)
+
+    assert [episode.number for episode in first] == [1, 2]
+    assert [episode.number for episode in second] == [1, 2]
+    assert calls == 1
+
+    await service.close()
 
 
 async def test_anilist_graphql_errors_raise_metadata_error() -> None:

@@ -1,4 +1,10 @@
+from pathlib import Path  # noqa: I001
+
+from ani_watch.config.settings import AppSettings
+
 from ani_watch.domain.models import AnimeDetails
+from ani_watch.services.library import LibraryService
+from ani_watch.storage.database import Database
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.details import AnimeDetailsScreen
 
@@ -20,7 +26,7 @@ def sample_anime() -> AnimeDetails:
 
 
 async def test_details_screen_renders_metadata() -> None:
-    app = AniWatchApp()
+    app = AniWatchApp(settings=AppSettings(database_url="sqlite:///:memory:"))
 
     async with app.run_test() as pilot:
         await app.push_screen(AnimeDetailsScreen(sample_anime()))
@@ -48,11 +54,18 @@ async def test_details_screen_empty_state_disables_metadata_actions() -> None:
         assert app.screen.query_one("#favorite").disabled
 
 
-async def test_favorite_action_toggles_local_state() -> None:
-    app = AniWatchApp()
+async def test_favorite_action_persists_state(tmp_path: Path) -> None:
+    database = Database(f"sqlite:///{tmp_path / 'favorites.db'}")
+    database.create_schema()
+    library = LibraryService(database)
+    app = AniWatchApp(
+        settings=AppSettings(database_url=f"sqlite:///{tmp_path / 'favorites.db'}"),
+        library_service=library,
+        database=database,
+    )
 
     async with app.run_test() as pilot:
-        await app.push_screen(AnimeDetailsScreen(sample_anime()))
+        await app.push_screen(AnimeDetailsScreen(sample_anime(), library_service=library))
         await pilot.pause()
 
         favorite = app.screen.query_one("#favorite")
@@ -60,13 +73,14 @@ async def test_favorite_action_toggles_local_state() -> None:
 
         await pilot.press("t")
         assert str(favorite.label) == "Unfavorite"
-        assert "added to favorites locally" in str(app.screen.query_one("#details-status").content)
+        assert "added to favorites" in str(app.screen.query_one("#details-status").content)
 
         await pilot.press("t")
         assert str(favorite.label) == "Favorite"
-        assert "removed from favorites locally" in str(
-            app.screen.query_one("#details-status").content
-        )
+        assert "removed from favorites" in str(app.screen.query_one("#details-status").content)
+        assert library.favorites.list() == []
+
+    database.dispose()
 
 
 async def test_details_screen_back_button_returns_home() -> None:

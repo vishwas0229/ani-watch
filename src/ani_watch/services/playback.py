@@ -99,3 +99,128 @@ class PlaybackManager:
             raise
         except Exception as exc:
             raise PlaybackError("Playback recovery failed.") from exc
+
+
+class PlaybackSession:
+    """Bind playback, provider resolution, and local progress tracking."""
+
+    def __init__(self, manager, resolver, library) -> None:
+        self.manager = manager
+        self.resolver = resolver
+        self.library = library
+        self._anime = None
+        self._episode = None
+        self._episode_index = 0
+        self._total_episodes = 1
+        self._completion_recorded = False
+        self._history_recorded = False
+
+    async def start(self, anime, episode, *, episode_index: int = 0, total_episodes: int = 1):
+        """Resolve and start an episode using the saved local progress."""
+        from ani_watch.domain.models import EpisodeRef
+
+        candidate = await self.resolver.resolve(
+            anime,
+            EpisodeRef(anime_id=anime.anilist_id, number=episode.number),
+            quality=self.manager.quality(),
+        )
+        progress = self.library.progress.get(anime.anilist_id, episode.number)
+        resume_seconds = 0
+        if progress is not None and not progress.completed:
+            resume_seconds = max(0, int(progress.position_seconds))
+
+        self.manager.start(candidate.uri, resume_seconds=resume_seconds)
+        self._anime = anime
+        self._episode = episode
+        self._episode_index = episode_index
+        self._total_episodes = max(1, total_episodes)
+        self._completion_recorded = False
+        self._history_recorded = False
+        return candidate
+
+    @property
+    def active(self) -> bool:
+        return self._anime is not None and self._episode is not None
+
+    @property
+    def current_index(self) -> int:
+        return self._episode_index
+
+    def save_progress(self, *, force_complete: bool = False) -> None:
+        """Persist the current player position when a session is active."""
+        if not self.active:
+            return
+
+        position_ms = max(0, int(self.manager.player.get_time()))
+        duration_ms = max(0, int(self.manager.player.get_length()))
+        position_seconds = position_ms // 1000
+        duration_seconds = duration_ms // 1000 if duration_ms > 0 else None
+
+        player_complete = self.manager.player.is_complete()
+        completed = (
+            force_complete
+            or player_complete
+            or (
+                duration_seconds is not None
+                and duration_seconds > 0
+                and position_seconds >= duration_seconds * 0.9
+            )
+        )
+        if self._completion_recorded and not force_complete:
+            return
+
+        if completed and self._history_recorded:
+            self.library.progress.save(
+                self._anime.anilist_id,
+                self._episode.number,
+                position_seconds,
+                duration_seconds,
+                completed=True,
+            )
+        else:
+            self.library.save_progress(
+                self._anime.anilist_id,
+                self._episode.number,
+                position_seconds,
+                duration_seconds,
+            )
+            if completed:
+                self._history_recorded = True
+
+        if force_complete or player_complete:
+            self._completion_recorded = True
+
+    def completion_pending(self) -> bool:
+        """Return true when playback has completed and needs final persistence."""
+        return self.active and self.manager.player.is_complete() and not self._completion_recorded
+
+    def record_completion(self) -> None:
+        """Persist a completed playback session exactly once."""
+        if self.completion_pending():
+            self.save_progress(force_complete=True)
+
+    def next_episode_index(self, total: int) -> int | None:
+        """Return the next episode index according to playback settings."""
+        if not self.active:
+            return None
+        return self.manager.next_episode_index(self._episode_index, total)
+
+    def stop(self) -> None:
+        """Persist current progress and stop the active player."""
+        if not self.active:
+            return
+        try:
+            self.save_progress()
+        finally:
+            self.manager.player.stop()
+            self._anime = None
+            self._episode = None
+            self._completion_recorded = False
+            self._history_recorded = False
+
+    def close(self) -> None:
+        """Stop active playback and release player resources."""
+        self.stop()
+        release = getattr(self.manager.player, "release", None)
+        if callable(release):
+            release()

@@ -7,7 +7,9 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.models import EpisodeItem
+from ani_watch.domain.errors import AniWatchError
+from ani_watch.domain.models import AnimeRef, EpisodeItem
+from ani_watch.services.playback import PlaybackSession
 
 
 class EpisodeScreen(Screen[None]):
@@ -89,11 +91,17 @@ class EpisodeScreen(Screen[None]):
         self,
         anime_title: str,
         episodes: Sequence[EpisodeItem] = (),
+        *,
+        anime_id: int | None = None,
+        playback_session: PlaybackSession | None = None,
     ) -> None:
         super().__init__()
         self.anime_title = anime_title.strip() or "Unknown anime"
         self.episodes = tuple(episodes)
+        self.anime_id = anime_id
+        self.playback_session = playback_session
         self._selected_index = 0
+        self._playback_timer = None
 
     def compose(self) -> ComposeResult:
         """Render the episode list and navigation actions."""
@@ -139,6 +147,7 @@ class EpisodeScreen(Screen[None]):
         action = event.button.id
 
         if action == "back":
+            self.stop_playback()
             self.app.pop_screen()
             return
         if action == "play":
@@ -256,8 +265,20 @@ class EpisodeScreen(Screen[None]):
         """Select the previous available episode."""
         self._move_selection(-1)
 
+    def _session(self) -> PlaybackSession:
+        """Return the injected or application-owned playback session."""
+        if self.playback_session is not None:
+            return self.playback_session
+        session = getattr(self.app, "playback_session", None)
+        if session is None and hasattr(self.app, "get_playback_session"):
+            session = self.app.get_playback_session()
+        if session is None:
+            raise RuntimeError("EpisodeScreen requires a playback session.")
+        self.playback_session = session
+        return session
+
     def play_selected(self) -> None:
-        """Prepare playback handoff without coupling to the player layer."""
+        """Resolve the selected episode and start VLC playback asynchronously."""
         if not self.episodes:
             self.query_one("#episode-status", Static).update("No episode is available to play yet.")
             return
@@ -268,14 +289,82 @@ class EpisodeScreen(Screen[None]):
                 f"Episode {episode.number} is unavailable."
             )
             return
+        if self.anime_id is None:
+            self.query_one("#episode-status", Static).update(
+                "Playback is unavailable because the anime identifier is missing."
+            )
+            return
 
-        self.query_one("#episode-status", Static).update(
-            f"Playback requested for Episode {episode.number}. "
-            "VLC integration will be connected in the playback phase."
+        self.query_one("#episode-status", Static).update(f"Resolving Episode {episode.number}…")
+        self.run_worker(self._start_selected(), exclusive=True)
+
+    async def _start_selected(self) -> None:
+        """Resolve and start the selected episode through application services."""
+        episode = self.episodes[self._selected_index]
+        status = self.query_one("#episode-status", Static)
+        try:
+            candidate = await self._session().start(
+                AnimeRef(anilist_id=self.anime_id, title=self.anime_title),
+                episode,
+                episode_index=self._selected_index,
+                total_episodes=len(self.episodes),
+            )
+        except AniWatchError as exc:
+            status.update(str(exc))
+            return
+        except Exception:
+            status.update(
+                f"Unable to start Episode {episode.number}. Check provider and VLC availability."
+            )
+            return
+
+        if self._playback_timer is None:
+            self._playback_timer = self.set_interval(1, self._poll_playback)
+        status.update(
+            f"Playing Episode {episode.number} via {candidate.provider}. "
+            "Progress and resume are saved locally."
         )
+
+    def _poll_playback(self) -> None:
+        """Persist completion and trigger auto-next when VLC reaches the end."""
+        session = self.playback_session
+        if session is None or not session.completion_pending():
+            return
+
+        session.record_completion()
+        next_index = session.next_episode_index(len(self.episodes))
+        while next_index is not None and not self.episodes[next_index].available:
+            next_index += 1
+            if next_index >= len(self.episodes):
+                next_index = None
+
+        if next_index is None:
+            self.query_one("#episode-status", Static).update(
+                f"Episode {self.episodes[self._selected_index].number} completed."
+            )
+            return
+
+        self._select_index(next_index)
+        self.query_one("#episode-status", Static).update(
+            f"Episode completed. Starting Episode {self.episodes[next_index].number}…"
+        )
+        self.run_worker(self._start_selected(), exclusive=True)
+
+    def stop_playback(self) -> None:
+        """Persist the current playback position and stop VLC before leaving."""
+        if self._playback_timer is not None:
+            self._playback_timer.pause()
+            self._playback_timer = None
+        if self.playback_session is not None:
+            self.playback_session.stop()
+
+    def on_unmount(self) -> None:
+        """Stop active playback when the episode screen is removed."""
+        self.stop_playback()
 
     def action_go_back(self) -> None:
         """Return to the previous screen."""
+        self.stop_playback()
         self.app.pop_screen()
 
     def action_next_episode(self) -> None:
