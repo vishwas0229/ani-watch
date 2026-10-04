@@ -1,5 +1,7 @@
 """Settings screen for Ani-Watch."""
 
+from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
@@ -175,7 +177,10 @@ class SettingsScreen(Screen[None]):
             root = root.expanduser()
             if root.is_dir():
                 return f"Playback provider: local media ready • {root}"
-            return f"Playback provider: local media path does not exist or is not a directory • {root}"
+            return (
+                "Playback provider: local media path does not exist or is not a directory • "
+                f"{root}"
+            )
         except OSError:
             return f"Playback provider: unable to access local media path • {root}"
 
@@ -245,7 +250,9 @@ class SettingsScreen(Screen[None]):
         self.query_one("#auto-next", Select).value = (
             "true" if self.settings.playback.auto_next else "false"
         )
-        self.query_one("#local-media-root", Input).value = str(self.settings.local_media_root or "")
+        self.query_one("#local-media-root", Input).value = str(
+            self.settings.local_media_root or ""
+        )
         self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(
             "Settings reset. Press Save to persist the defaults."
