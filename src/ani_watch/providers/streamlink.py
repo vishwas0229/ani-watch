@@ -8,6 +8,7 @@ HTTP/HLS URL for the existing VLC pipeline.
 from __future__ import annotations
 
 import asyncio
+import re
 from string import Formatter
 from urllib.parse import quote, urlparse
 
@@ -76,12 +77,29 @@ class StreamlinkProvider:
         return uri
 
     @staticmethod
-    def _pick_stream(streams, quality: str | None):
+    def _best_stream(streams):
+        best = streams.get("best")
+        if best is not None:
+            return "best", best
+
+        ranked = []
+        for name, stream in streams.items():
+            match = re.search(r"(\\d{3,4})p", str(name).lower())
+            if match:
+                ranked.append((int(match.group(1)), str(name), stream))
+        if ranked:
+            _, name, stream = max(ranked)
+            return name, stream
+
+        return next(iter(streams.items()))
+
+    @classmethod
+    def _pick_stream(cls, streams, quality: str | None):
         if not streams:
             return None, None
 
         if quality in {None, "auto"}:
-            return "best", streams.get("best")
+            return cls._best_stream(streams)
 
         requested = quality.lower()
         exact = streams.get(requested)
@@ -96,7 +114,7 @@ class StreamlinkProvider:
         if prefixed:
             return sorted(prefixed, key=lambda item: str(item[0]))[0]
 
-        return "best", streams.get("best")
+        return cls._best_stream(streams)
 
     async def available(self, anime: AnimeRef, episode: EpisodeRef) -> bool:
         """Return whether the configured Streamlink URL can be rendered."""
