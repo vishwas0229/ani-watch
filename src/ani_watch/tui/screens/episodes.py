@@ -341,8 +341,7 @@ class EpisodeScreen(Screen[None]):
                 "#episode-status",
                 Static,
             ).update(
-                "Playback tracking failed. The episode can continue, "
-                "but progress may not be saved."
+                "Playback tracking failed. The episode can continue, but progress may not be saved."
             )
             return
 

@@ -52,9 +52,7 @@ class FakeLibrary:
         position_seconds: int,
         duration_seconds: int | None,
     ) -> None:
-        self.save_calls.append(
-            (anime_id, episode_number, position_seconds, duration_seconds)
-        )
+        self.save_calls.append((anime_id, episode_number, position_seconds, duration_seconds))
         completed = (
             duration_seconds is not None
             and duration_seconds > 0
@@ -107,11 +105,7 @@ class FakePlayer:
         return self.playing
 
     def is_complete(self) -> bool:
-        return (
-            self.duration_ms > 0
-            and self.position_ms >= self.duration_ms
-            and not self.playing
-        )
+        return self.duration_ms > 0 and self.position_ms >= self.duration_ms and not self.playing
 
 
 class FakeResolver:
