@@ -1,6 +1,7 @@
 from textual.widgets import Button
 
 from ani_watch.domain.errors import ProviderError
+from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import EpisodeItem
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.episodes import EpisodeScreen
@@ -128,13 +129,11 @@ async def test_episode_screen_escape_returns_home() -> None:
         assert not isinstance(app.screen, EpisodeScreen)
 
 
-async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
-    async def fail_resolve_url(source_url: str, *, quality: str | None = None):
-        raise ProviderError("unsupported source")
-
+async def test_watch_online_does_not_open_unsupported_anilist_source(
+    monkeypatch,
+) -> None:
     class FakeMetadataService:
         async def streaming_episodes(self, anime_id: int):
-            assert anime_id == 100
             return {
                 1: [
                     {
@@ -144,6 +143,9 @@ async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
                     }
                 ]
             }
+
+    async def fail_resolve_url(source_url: str, *, quality: str | None = None):
+        raise ProviderError("unsupported source")
 
     opened = []
     monkeypatch.setattr(
@@ -168,5 +170,7 @@ async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
         await pilot.click("#watch-online")
         await pilot.pause()
 
-        assert opened == ["https://example.com/watch/1"]
-        assert "Opened Episode 1 on Example" in str(app.screen.query_one("#episode-status").content)
+        assert opened == []
+        assert "No VLC-compatible stream was resolved" in str(
+            app.screen.query_one("#episode-status").content
+        )
