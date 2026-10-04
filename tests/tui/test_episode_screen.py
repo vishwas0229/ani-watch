@@ -74,7 +74,7 @@ async def test_episode_navigation_skips_unavailable_rows() -> None:
         assert app.screen.query_one("#episode-1").has_focus
 
 
-async def test_play_action_uses_provider_neutral_handoff() -> None:
+async def test_play_action_requires_anime_identifier() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
@@ -84,7 +84,7 @@ async def test_play_action_uses_provider_neutral_handoff() -> None:
         await pilot.press("space")
         await pilot.pause()
 
-        assert "Playback requested for Episode 1" in str(
+        assert "anime identifier is missing" in str(
             app.screen.query_one("#episode-status").content
         )
 
