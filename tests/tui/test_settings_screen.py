@@ -23,6 +23,7 @@ async def test_settings_screen_renders_controls() -> None:
             assert app.screen.query_one("#quality")
             assert app.screen.query_one("#auto-next")
             assert app.screen.query_one("#local-media-root")
+            assert app.screen.query_one("#online-media-url")
             assert app.screen.query_one("#save")
 
             save = app.screen.query_one("#save", Button)
@@ -47,6 +48,7 @@ async def test_settings_reset_restores_defaults() -> None:
 
         assert app.screen.query_one("#theme").value == "midnight"
         assert app.screen.query_one("#quality").value == "1080p"
+        assert app.screen.query_one("#online-media-url").value == ""
 
 
 async def test_settings_escape_returns() -> None:
@@ -92,4 +94,28 @@ async def test_settings_save_local_media_root_updates_provider_state(tmp_path: P
 
         assert app.settings.local_media_root == tmp_path
         assert "local media ready" in str(app.screen.query_one("#provider-status").content)
+        assert app.provider_resolver is None
+
+
+async def test_settings_save_online_media_template_updates_provider_state(tmp_path: Path) -> None:
+    app = AniWatchApp()
+    store = SettingsStore(tmp_path / "config.toml")
+
+    async with app.run_test() as pilot:
+        await app.push_screen(SettingsScreen(store=store))
+        await pilot.pause()
+
+        online = app.screen.query_one("#online-media-url")
+        online.value = "https://media.example/{anime_id}/{episode}.m3u8"
+        save = app.screen.query_one("#save", Button)
+        save.focus()
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert app.settings.online_media_url_template == (
+            "https://media.example/{anime_id}/{episode}.m3u8"
+        )
+        assert "online direct-media template configured" in str(
+            app.screen.query_one("#provider-status").content
+        )
         assert app.provider_resolver is None
