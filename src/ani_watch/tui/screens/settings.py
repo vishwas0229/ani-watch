@@ -202,7 +202,7 @@ class SettingsScreen(Screen[None]):
         if self.settings.streamlink_url_template:
             statuses.append("Streamlink URL template configured")
         if self.settings.online_media_url_template:
-            statuses.append("direct online media template configured")
+            statuses.append("online direct-media template configured")
 
         if not statuses:
             return (
