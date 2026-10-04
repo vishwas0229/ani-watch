@@ -162,6 +162,7 @@ def auth_sync(
         raise typer.Exit(code=2)
 
     database = Database(settings.database_url)
+    upgrade(database.engine)
     library = LibraryService(database)
     sync = AniListSyncService(
         token,
