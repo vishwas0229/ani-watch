@@ -73,9 +73,7 @@ class AnimeMetadataService:
         if total is not None and total > 0:
             numbers = range(1, total + 1)
             available_numbers = (
-                set(numbers)
-                if status == "FINISHED" or len(scheduled) >= total
-                else scheduled
+                set(numbers) if status == "FINISHED" or len(scheduled) >= total else scheduled
             )
         else:
             numbers = sorted(scheduled)
