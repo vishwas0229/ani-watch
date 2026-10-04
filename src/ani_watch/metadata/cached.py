@@ -96,6 +96,73 @@ class CachedMetadataService:
         )
         return details
 
+
+    async def episode_items(self, anime_id: int) -> list["EpisodeItem"]:
+        """Return cached/provider-neutral episode rows for one anime."""
+        from ani_watch.domain.models import EpisodeItem
+
+        key = f"episodes:{anime_id}"
+        cached = self.cache.get(key)
+        if cached is not None:
+            return [EpisodeItem(**item) for item in cached]
+
+        if self.offline:
+            raise OfflineError(
+                "Offline mode is enabled and these episode details are not cached locally."
+            )
+
+        first_page = await self.client.episodes(anime_id, page=1, limit=25)
+        total = self._int(first_page.get("episodes"))
+        duration = self._int(first_page.get("duration"))
+        schedule = first_page.get("airingSchedule") or {}
+        if not isinstance(schedule, dict):
+            schedule = {}
+
+        scheduled = self._episode_numbers(schedule.get("nodes"))
+        has_next = bool((schedule.get("pageInfo") or {}).get("hasNextPage"))
+
+        page = 2
+        while total is None and has_next:
+            next_page = await self.client.episodes(anime_id, page=page, limit=25)
+            next_schedule = next_page.get("airingSchedule") or {}
+            if not isinstance(next_schedule, dict):
+                break
+            scheduled.update(self._episode_numbers(next_schedule.get("nodes")))
+            has_next = bool((next_schedule.get("pageInfo") or {}).get("hasNextPage"))
+            page += 1
+
+        numbers = range(1, total + 1) if total is not None and total > 0 else sorted(scheduled)
+        episodes = [
+            EpisodeItem(number=number, title=None, duration_minutes=duration, available=True)
+            for number in numbers
+            if number > 0
+        ]
+        self.cache.set(
+            key,
+            [
+                {
+                    "number": episode.number,
+                    "title": episode.title,
+                    "duration_minutes": episode.duration_minutes,
+                    "watched": episode.watched,
+                    "available": episode.available,
+                }
+                for episode in episodes
+            ],
+        )
+        return episodes
+
+    @classmethod
+    def _episode_numbers(cls, nodes: Any) -> set[int]:
+        """Extract positive numeric episode numbers and ignore specials."""
+        return {
+            number
+            for node in nodes or []
+            if isinstance(node, dict)
+            for number in (cls._int(node.get("episode")),)
+            if number is not None and number > 0
+        }
+
     @staticmethod
     def _title(value: Any) -> str:
         return (
