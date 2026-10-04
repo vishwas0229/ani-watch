@@ -17,3 +17,8 @@ ProviderRegistry controls deterministic order. ProviderResolver tries providers 
 To add a provider, implement src/ani_watch/providers/contracts.py, add provider-specific parsing/network logic in its own module, and register it in the application bootstrap layer. Keep provider details out of the TUI and domain.
 
 The project intentionally does not implement DRM bypassing or unauthorized copyrighted-stream access.
+
+
+## Online watching
+
+The TUI can use the AniList `streamingEpisodes` field to find links to legal external streaming episode pages. These links are opened in the user's default browser rather than treated as direct media files. Online links are separate from the local-file provider, so configuring local media is optional when using Watch Online.
