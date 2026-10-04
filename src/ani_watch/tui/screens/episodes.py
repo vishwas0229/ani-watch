@@ -1,14 +1,16 @@
 """Episode selection screen for Ani-Watch."""
 
 from collections.abc import Sequence
+import webbrowser
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.errors import AniWatchError, ProviderError
+from ani_watch.domain.errors import AniWatchError, OfflineError, ProviderError
 from ani_watch.domain.models import AnimeRef, EpisodeItem
+from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.services.playback import PlaybackSession
 
 
@@ -85,6 +87,7 @@ class EpisodeScreen(Screen[None]):
         ("j", "next_episode", "Next"),
         ("k", "previous_episode", "Previous"),
         ("space", "play_selected", "Play"),
+        ("o", "watch_online", "Watch Online"),
     ]
 
     def __init__(
@@ -94,12 +97,14 @@ class EpisodeScreen(Screen[None]):
         *,
         anime_id: int | None = None,
         playback_session: PlaybackSession | None = None,
+        metadata_service: CachedMetadataService | None = None,
     ) -> None:
         super().__init__()
         self.anime_title = anime_title.strip() or "Unknown anime"
         self.episodes = tuple(episodes)
         self.anime_id = anime_id
         self.playback_session = playback_session
+        self.metadata_service = metadata_service
         self._selected_index = 0
         self._playback_timer = None
 
@@ -136,6 +141,11 @@ class EpisodeScreen(Screen[None]):
                     variant="primary",
                     disabled=not bool(self.episodes),
                 )
+                yield Button(
+                    "Watch Online",
+                    id="watch-online",
+                    disabled=not bool(self.episodes),
+                )
                 yield Button("Back", id="back")
 
     def on_mount(self) -> None:
@@ -152,6 +162,9 @@ class EpisodeScreen(Screen[None]):
             return
         if action == "play":
             self.play_selected()
+            return
+        if action == "watch-online":
+            self.watch_online()
             return
         if action == "previous":
             self.previous_episode()
@@ -265,6 +278,73 @@ class EpisodeScreen(Screen[None]):
         """Select the previous available episode."""
         self._move_selection(-1)
 
+    def _metadata(self) -> CachedMetadataService:
+        """Return the injected or application-owned metadata service."""
+        if self.metadata_service is not None:
+            return self.metadata_service
+        service = getattr(self.app, "metadata_service", None)
+        if service is None:
+            raise RuntimeError("EpisodeScreen requires an application metadata service.")
+        self.metadata_service = service
+        return service
+
+    def watch_online(self) -> None:
+        """Open an AniList-listed legal streaming page for the selected episode."""
+        if not self.episodes:
+            self.query_one("#episode-status", Static).update(
+                "No episode is available to watch online."
+            )
+            return
+        episode = self.episodes[self._selected_index]
+        if self.anime_id is None:
+            self.query_one("#episode-status", Static).update(
+                "Online playback is unavailable because the anime identifier is missing."
+            )
+            return
+        self.query_one("#episode-status", Static).update(
+            f"Finding an official stream for Episode {episode.number}…"
+        )
+        self.run_worker(self._open_online_stream(episode.number), exclusive=True)
+
+    async def _open_online_stream(self, episode_number: int) -> None:
+        status = self.query_one("#episode-status", Static)
+        try:
+            links_by_episode = await self._metadata().streaming_episodes(self.anime_id)
+        except OfflineError as exc:
+            status.update(f"Offline: {exc}")
+            return
+        except AniWatchError as exc:
+            status.update(str(exc))
+            return
+        except Exception:
+            status.update(
+                "Unable to find online streaming links. Check your network connection."
+            )
+            return
+
+        links = links_by_episode.get(episode_number, [])
+        if not links:
+            status.update(
+                f"No legal online streaming link is listed by AniList for Episode "
+                f"{episode_number}."
+            )
+            return
+
+        selected = links[0]
+        url = selected["url"]
+        try:
+            opened = webbrowser.open(url)
+        except Exception:
+            opened = False
+        if not opened:
+            status.update(f"Open this streaming page in your browser: {url}")
+            return
+
+        site = selected.get("site") or "online provider"
+        status.update(
+            f"Opened Episode {episode_number} on {site} in your default browser."
+        )
+
     def _provider_names(self) -> tuple[str, ...]:
         """Return the configured provider names when available."""
         try:
@@ -305,10 +385,7 @@ class EpisodeScreen(Screen[None]):
 
         provider_names = self._provider_names()
         if not provider_names:
-            self.query_one("#episode-status", Static).update(
-                "No playback provider is configured. Open Settings and set Local media "
-                "to a folder containing authorized/user-owned episode files."
-            )
+            self.watch_online()
             return
 
         self.query_one("#episode-status", Static).update(f"Resolving Episode {episode.number}…")
