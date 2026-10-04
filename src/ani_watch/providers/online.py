@@ -43,8 +43,7 @@ class DirectUrlProvider:
             if root not in self._allowed_fields:
                 allowed = ", ".join(sorted(self._allowed_fields))
                 raise ValueError(
-                    f"Unsupported online URL placeholder '{field_name}'. "
-                    f"Use only: {allowed}."
+                    f"Unsupported online URL placeholder '{field_name}'. Use only: {allowed}."
                 )
 
     def _render(self, anime: AnimeRef, episode: EpisodeRef, quality: str | None) -> str:
@@ -61,9 +60,7 @@ class DirectUrlProvider:
 
         parsed = urlparse(uri)
         if parsed.scheme not in self._allowed_schemes:
-            raise ProviderError(
-                "Online media URL must use http, https, or file scheme."
-            )
+            raise ProviderError("Online media URL must use http, https, or file scheme.")
         if parsed.scheme in {"http", "https"} and not parsed.netloc:
             raise ProviderError("Online media URL must contain a valid host.")
         if parsed.scheme == "file" and not parsed.path:
