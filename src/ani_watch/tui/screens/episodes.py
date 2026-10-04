@@ -368,7 +368,7 @@ class EpisodeScreen(Screen[None]):
             return
 
         anime = AnimeRef(anilist_id=self.anime_id, title=self.anime_title)
-        quality = self._session().manager.quality()
+        quality = getattr(self.app.settings.playback, "quality", "auto")
         for selected in links:
             url = selected["url"]
             try:
