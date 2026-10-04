@@ -58,6 +58,20 @@ Important runtime settings include:
 - HTTP timeout and retry count
 - AniList OAuth application settings
 
+## AniList account commands
+
+After configuring your AniList OAuth client ID, client secret, and redirect URI:
+
+```bash
+ani-watch auth login
+ani-watch auth status
+ani-watch auth sync
+ani-watch auth sync --no-pull --push
+ani-watch auth logout
+```
+
+The login flow prints the AniList authorization URL and accepts either the returned authorization code or the full callback URL. Tokens are stored through the operating system credential store and are never written to application logs. Sync reconciles watch progress with the local library; use `--push` explicitly to send local progress to AniList.
+
 ## Documentation
 
 - [Installation](docs/installation.md)
