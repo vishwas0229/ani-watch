@@ -1,6 +1,7 @@
 import pytest
 from typer.testing import CliRunner
 
+from ani_watch.auth.anilist import AniListOAuth
 from ani_watch.cli.main import app
 
 
@@ -25,7 +26,7 @@ class FakeAccount:
         )
 
     async def login(self, code, *, client_id=None, client_secret=None, redirect_uri=None):
-        assert code == "callback-code"
+        assert AniListOAuth.extract_code(code) == "callback-code"
         self.logged_in = True
         return "token"
 
