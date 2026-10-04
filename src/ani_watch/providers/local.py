@@ -92,7 +92,9 @@ class LocalFileProvider:
             (25, f"{episode_number}.*"),
         )
         try:
-            folder_roots = tuple(self.root / folder_name for folder_name in self._folder_names(anime))
+            folder_roots = tuple(
+                self.root / folder_name for folder_name in self._folder_names(anime)
+            )
         except (TypeError, AttributeError):
             folder_roots = ()
 
@@ -100,16 +102,16 @@ class LocalFileProvider:
             try:
                 if not folder.is_dir():
                     continue
-                    for rank, pattern in episode_patterns:
-                        for path in folder.rglob(pattern):
-                            try:
-                                if not path.is_file():
-                                    continue
-                            except OSError:
+                for rank, pattern in episode_patterns:
+                    for path in folder.rglob(pattern):
+                        try:
+                            if not path.is_file():
                                 continue
-                            matches[path] = min(rank, matches.get(path, rank))
-                except OSError:
-                    continue
+                        except OSError:
+                            continue
+                        matches[path] = min(rank, matches.get(path, rank))
+            except OSError:
+                continue
 
         return sorted(matches, key=lambda path: (matches[path], path.as_posix().casefold()))
 
