@@ -124,8 +124,9 @@ class StreamlinkProvider:
             return False
         return streamlink is not None
 
+    @classmethod
     async def resolve_url(
-        self,
+        cls,
         source_url: str,
         *,
         quality: str | None = None,
@@ -138,7 +139,7 @@ class StreamlinkProvider:
 
         source_url = source_url.strip()
         parsed = urlparse(source_url)
-        if parsed.scheme not in self._allowed_schemes or not parsed.netloc:
+        if parsed.scheme not in cls._allowed_schemes or not parsed.netloc:
             raise ProviderError("Streamlink source URL must use a valid http or https URL.")
 
         try:
@@ -148,7 +149,7 @@ class StreamlinkProvider:
                 f"Streamlink could not resolve the online source: {exc}"
             ) from exc
 
-        selected_name, selected = self._pick_stream(streams, quality)
+        selected_name, selected = cls._pick_stream(streams, quality)
         if selected is None:
             raise ProviderError("Streamlink found no playable streams for the online source.")
 
@@ -160,7 +161,7 @@ class StreamlinkProvider:
 
         return MediaCandidate(
             uri=playable_url,
-            provider=self.name,
+            provider=cls.name,
             quality=selected_name,
         )
 
