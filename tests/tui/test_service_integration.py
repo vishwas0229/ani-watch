@@ -2,7 +2,6 @@ from pathlib import Path
 
 from ani_watch.config.settings import AppSettings
 from ani_watch.domain.models import AnimeDetails, EpisodeItem
-from ani_watch.player.vlc import VlcPlayer
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.registry import ProviderRegistry
 from ani_watch.providers.resilience import ProviderResolver
