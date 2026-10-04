@@ -5,12 +5,12 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.services.library import LibraryService
 from ani_watch.domain.models import (
     ContinueWatchingItem,
     LibrarySnapshot,
     RecentlyWatchedItem,
 )
+from ani_watch.services.library import LibraryService
 
 
 class LibraryScreen(Screen[None]):
