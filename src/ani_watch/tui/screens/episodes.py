@@ -326,12 +326,28 @@ class EpisodeScreen(Screen[None]):
         )
 
     def _poll_playback(self) -> None:
-        """Persist completion and trigger auto-next when VLC reaches the end."""
+        """Persist playback progress and trigger auto-next on completion."""
         session = self.playback_session
-        if session is None or not session.completion_pending():
+        if session is None:
             return
 
-        session.record_completion()
+        try:
+            completed = session.tick()
+        except AniWatchError as exc:
+            self.query_one("#episode-status", Static).update(str(exc))
+            return
+        except Exception:
+            self.query_one(
+                "#episode-status",
+                Static,
+            ).update(
+                "Playback tracking failed. The episode can continue, but progress may not be saved."
+            )
+            return
+
+        if not completed:
+            return
+
         next_index = session.next_episode_index(len(self.episodes))
         while next_index is not None and not self.episodes[next_index].available:
             next_index += 1

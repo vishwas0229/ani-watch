@@ -1,5 +1,6 @@
 """Playback intelligence orchestration."""
 
+import time
 from collections.abc import Callable
 
 from ani_watch.config.settings import PlaybackSettings
@@ -104,16 +105,27 @@ class PlaybackManager:
 class PlaybackSession:
     """Bind playback, provider resolution, and local progress tracking."""
 
-    def __init__(self, manager, resolver, library) -> None:
+    def __init__(
+        self,
+        manager,
+        resolver,
+        library,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        progress_interval_seconds: float = 5.0,
+    ) -> None:
         self.manager = manager
         self.resolver = resolver
         self.library = library
+        self._clock = clock
+        self.progress_interval_seconds = max(0.0, float(progress_interval_seconds))
         self._anime = None
         self._episode = None
         self._episode_index = 0
         self._total_episodes = 1
         self._completion_recorded = False
         self._history_recorded = False
+        self._last_persist_at: float | None = None
 
     async def start(self, anime, episode, *, episode_index: int = 0, total_episodes: int = 1):
         """Resolve and start an episode using the saved local progress."""
@@ -136,6 +148,7 @@ class PlaybackSession:
         self._total_episodes = max(1, total_episodes)
         self._completion_recorded = False
         self._history_recorded = False
+        self._last_persist_at = None
         return candidate
 
     @property
@@ -190,6 +203,25 @@ class PlaybackSession:
         if force_complete or player_complete:
             self._completion_recorded = True
 
+    def tick(self, *, now: float | None = None) -> bool:
+        """Persist active playback state when due and report fresh completion."""
+        if not self.active:
+            return False
+
+        current_time = self._clock() if now is None else float(now)
+        completed = self.completion_pending()
+        player_paused = not self.manager.player.is_playing()
+        interval_elapsed = (
+            self._last_persist_at is None
+            or current_time - self._last_persist_at >= self.progress_interval_seconds
+        )
+
+        if completed or player_paused or interval_elapsed:
+            self.save_progress(force_complete=completed)
+            self._last_persist_at = current_time
+
+        return completed
+
     def completion_pending(self) -> bool:
         """Return true when playback has completed and needs final persistence."""
         return self.active and self.manager.player.is_complete() and not self._completion_recorded
@@ -217,6 +249,7 @@ class PlaybackSession:
             self._episode = None
             self._completion_recorded = False
             self._history_recorded = False
+            self._last_persist_at = None
 
     def close(self) -> None:
         """Stop active playback and release player resources."""

@@ -334,8 +334,15 @@ class HistoryScreen(Screen[None]):
             self._playback_timer = self.set_interval(1, self._save_progress)
 
     def _save_progress(self) -> None:
-        if self.playback_session is not None and self.playback_session.active:
-            self.playback_session.save_progress()
+        """Persist resume progress without duplicating playback lifecycle logic."""
+        if self.playback_session is None or not self.playback_session.active:
+            return
+        try:
+            self.playback_session.tick()
+        except Exception:
+            self.query_one("#history-status", Static).update(
+                "Playback tracking failed. The current position may not be saved."
+            )
 
     def stop_playback(self) -> None:
         """Persist the resume position and stop playback before leaving."""
