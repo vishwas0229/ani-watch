@@ -3,7 +3,7 @@
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, Label, Select, Static
+from textual.widgets import Button, Input, Label, Select, Static
 
 from ani_watch.auth.anilist import AniListTokenStore
 from ani_watch.config.settings import AppSettings
@@ -130,6 +130,19 @@ class SettingsScreen(Screen[None]):
                     allow_blank=False,
                 )
 
+            with Horizontal(classes="setting-row"):
+                yield Label("Local media", classes="setting-label")
+                yield Input(
+                    value=str(self.settings.local_media_root or ""),
+                    placeholder="/path/to/your/anime/files",
+                    id="local-media-root",
+                    classes="setting-control",
+                )
+
+            yield Static(
+                self._provider_status(),
+                id="provider-status",
+            )
             yield Static(
                 self._account_status(),
                 id="anilist-account",
@@ -146,8 +159,25 @@ class SettingsScreen(Screen[None]):
                 yield Button("Back", id="back")
 
     def on_mount(self) -> None:
-        """Show the current locally stored AniList authentication state."""
+        """Show the current provider and AniList configuration state."""
+        self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#anilist-account", Static).update(self._account_status())
+
+    def _provider_status(self) -> str:
+        """Return actionable status for the configured playback provider."""
+        root = self.settings.local_media_root
+        if root is None:
+            return (
+                "Playback provider: not configured. Set Local media to a folder containing "
+                "authorized/user-owned media."
+            )
+        try:
+            root = root.expanduser()
+            if root.is_dir():
+                return f"Playback provider: local media ready • {root}"
+            return f"Playback provider: local media path does not exist or is not a directory • {root}"
+        except OSError:
+            return f"Playback provider: unable to access local media path • {root}"
 
     @staticmethod
     def _account_status() -> str:
@@ -181,10 +211,29 @@ class SettingsScreen(Screen[None]):
         self.settings.playback.quality = self._selected("#quality")
         self.settings.playback.auto_next = self._selected("#auto-next") == "true"
 
+        raw_root = self.query_one("#local-media-root", Input).value.strip()
+        if raw_root:
+            root = Path(raw_root).expanduser()
+            if not root.is_dir():
+                self.query_one("#provider-status", Static).update(
+                    f"Local media path does not exist or is not a directory: {root}"
+                )
+                return
+            self.settings.local_media_root = root
+        else:
+            self.settings.local_media_root = None
+
         self.store.save(self.settings)
+        app = self.app
+        if getattr(app, "provider_resolver", None) is not None:
+            app.provider_resolver = None
+        playback_session = getattr(app, "playback_session", None)
+        if playback_session is not None and not playback_session.active:
+            app.playback_session = None
         apply_theme = getattr(self.app, "apply_theme", None)
         if callable(apply_theme):
             apply_theme(self.settings.ui.theme)
+        self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update("Settings saved successfully.")
 
     def reset_settings(self) -> None:
@@ -196,6 +245,8 @@ class SettingsScreen(Screen[None]):
         self.query_one("#auto-next", Select).value = (
             "true" if self.settings.playback.auto_next else "false"
         )
+        self.query_one("#local-media-root", Input).value = str(self.settings.local_media_root or "")
+        self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(
             "Settings reset. Press Save to persist the defaults."
         )
