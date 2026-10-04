@@ -7,8 +7,8 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.models import AnimeDetails
 from ani_watch.domain.errors import AniWatchError
+from ani_watch.domain.models import AnimeDetails
 from ani_watch.metadata.cached import CachedMetadataService
 from ani_watch.services.library import LibraryService
 from ani_watch.tui.screens.episodes import EpisodeScreen
