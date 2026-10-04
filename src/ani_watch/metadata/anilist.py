@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 
-from ani_watch.domain.errors import MetadataError, RateLimitError
+from ani_watch.domain.errors import AuthenticationError, MetadataError, RateLimitError
 
 GRAPHQL_URL = "https://graphql.anilist.co"
 
@@ -119,6 +119,11 @@ class AniListClient:
                     delay = float(retry_after) if retry_after else 2**attempt
                     await asyncio.sleep(delay)
                     continue
+
+                if response.status_code in (401, 403) and self._access_token:
+                    raise AuthenticationError(
+                        "AniList authentication failed. Run 'ani-watch auth login' again."
+                    )
 
                 if response.status_code >= 500:
                     if attempt >= self._retries:
