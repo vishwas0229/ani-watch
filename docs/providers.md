@@ -53,5 +53,23 @@ The direct-media template uses the same placeholders. For example:
 https://media.example/anime/{anime_id}/episode/{episode_padded}.m3u8
 ```
 
+
+### Real Streamlink integration test
+
+The repository includes an opt-in network integration test using a public HLS sample documented by Streamlink:
+
+```bash
+conda activate ani-watch
+ANI_WATCH_RUN_ONLINE_TESTS=1 python -m pytest tests/integration/test_streamlink_integration.py -v
+```
+
+For a desktop VLC smoke test of the complete Streamlink → Ani-Watch provider → VLC path:
+
+```bash
+python scripts/streamlink_vlc_smoke.py --seconds 5
+```
+
+The integration test is opt-in so normal CI remains deterministic. Streamlink documents that `streamlink.streams()` returns Stream objects and that HLS streams expose a `url` attribute suitable for playback. citeturn267082search0turn267082search3
+
 Use only media endpoints you are authorized to access. An external watch page is not automatically a direct media URL, and Ani-Watch does not implement DRM bypassing or unauthorized source scraping.
 
