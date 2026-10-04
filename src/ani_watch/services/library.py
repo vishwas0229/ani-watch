@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 
-from ani_watch.domain.models import ContinueWatchingItem, RecentlyWatchedItem, WatchHistoryEntry
+from ani_watch.domain.models import (
+    ContinueWatchingItem,
+    FavoriteAnime,
+    RecentlyWatchedItem,
+    WatchHistoryEntry,
+)
 from ani_watch.storage.database import Database
 from ani_watch.storage.models import FavoriteRecord, HistoryRecord
 from ani_watch.storage.repositories import (
@@ -32,6 +37,48 @@ class LibraryService:
 
     def unfavorite(self, anime_id: int) -> None:
         self.favorites.remove(anime_id)
+
+
+    def favorite_entries(self, limit: int = 100) -> list[FavoriteAnime]:
+        """Return persisted favorites with their stored anime metadata."""
+        import json
+
+        from ani_watch.storage.models import AnimeRecord
+
+        with self.db.session() as session:
+            rows = session.execute(
+                select(
+                    FavoriteRecord.anime_id,
+                    AnimeRecord.title,
+                    AnimeRecord.native_title,
+                    AnimeRecord.status,
+                    AnimeRecord.episodes,
+                    AnimeRecord.score,
+                    AnimeRecord.genres,
+                )
+                .join(AnimeRecord, AnimeRecord.id == FavoriteRecord.anime_id)
+                .order_by(desc(FavoriteRecord.created_at), FavoriteRecord.anime_id)
+                .limit(max(1, limit))
+            ).all()
+
+        favorites = []
+        for anime_id, title, native_title, status, episodes, score, genres_json in rows:
+            try:
+                genres = tuple(json.loads(genres_json or "[]"))
+            except json.JSONDecodeError:
+                genres = ()
+            favorites.append(
+                FavoriteAnime(
+                    anime_id=anime_id,
+                    title=title,
+                    native_title=native_title,
+                    status=status,
+                    episodes=episodes,
+                    score=score,
+                    genres=genres,
+                )
+            )
+        return favorites
 
     def save_progress(
         self,
