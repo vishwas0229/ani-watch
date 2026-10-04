@@ -1,7 +1,7 @@
 """Playback intelligence orchestration."""
 
-from collections.abc import Callable
 import time
+from collections.abc import Callable
 
 from ani_watch.config.settings import PlaybackSettings
 from ani_watch.domain.errors import PlaybackError
