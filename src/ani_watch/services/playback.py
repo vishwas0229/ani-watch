@@ -113,6 +113,7 @@ class PlaybackSession:
         self._episode_index = 0
         self._total_episodes = 1
         self._completion_recorded = False
+        self._history_recorded = False
 
     async def start(self, anime, episode, *, episode_index: int = 0, total_episodes: int = 1):
         """Resolve and start an episode using the saved local progress."""
@@ -134,6 +135,7 @@ class PlaybackSession:
         self._episode_index = episode_index
         self._total_episodes = max(1, total_episodes)
         self._completion_recorded = False
+        self._history_recorded = False
         return candidate
 
     @property
@@ -154,9 +156,10 @@ class PlaybackSession:
         position_seconds = position_ms // 1000
         duration_seconds = duration_ms // 1000 if duration_ms > 0 else None
 
+        player_complete = self.manager.player.is_complete()
         completed = (
             force_complete
-            or self.manager.player.is_complete()
+            or player_complete
             or (
                 duration_seconds is not None
                 and duration_seconds > 0
@@ -165,13 +168,26 @@ class PlaybackSession:
         )
         if self._completion_recorded and not force_complete:
             return
-        self.library.save_progress(
-            self._anime.anilist_id,
-            self._episode.number,
-            position_seconds,
-            duration_seconds,
-        )
-        if completed:
+
+        if completed and self._history_recorded:
+            self.library.progress.save(
+                self._anime.anilist_id,
+                self._episode.number,
+                position_seconds,
+                duration_seconds,
+                completed=True,
+            )
+        else:
+            self.library.save_progress(
+                self._anime.anilist_id,
+                self._episode.number,
+                position_seconds,
+                duration_seconds,
+            )
+            if completed:
+                self._history_recorded = True
+
+        if force_complete or player_complete:
             self._completion_recorded = True
 
     def completion_pending(self) -> bool:
@@ -200,6 +216,7 @@ class PlaybackSession:
             self._anime = None
             self._episode = None
             self._completion_recorded = False
+            self._history_recorded = False
 
     def close(self) -> None:
         """Stop active playback and release player resources."""
