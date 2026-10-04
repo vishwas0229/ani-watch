@@ -154,7 +154,17 @@ class PlaybackSession:
         position_seconds = position_ms // 1000
         duration_seconds = duration_ms // 1000 if duration_ms > 0 else None
 
-        completed = force_complete or self.manager.player.is_complete()
+        completed = (
+            force_complete
+            or self.manager.player.is_complete()
+            or (
+                duration_seconds is not None
+                and duration_seconds > 0
+                and position_seconds >= duration_seconds * 0.9
+            )
+        )
+        if self._completion_recorded and not force_complete:
+            return
         self.library.save_progress(
             self._anime.anilist_id,
             self._episode.number,
