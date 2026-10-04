@@ -142,7 +142,16 @@ class SettingsScreen(Screen[None]):
                 )
 
             with Horizontal(classes="setting-row"):
-                yield Label("Online media URL", classes="setting-label")
+                yield Label("Streamlink URL", classes="setting-label")
+                yield Input(
+                    value=self.settings.streamlink_url_template or "",
+                    placeholder="https://service.example/watch/{anime_id}/{episode}",
+                    id="streamlink-url",
+                    classes="setting-control",
+                )
+
+            with Horizontal(classes="setting-row"):
+                yield Label("Direct media URL", classes="setting-label")
                 yield Input(
                     value=self.settings.online_media_url_template or "",
                     placeholder="https://media.example/{anime_id}/{episode}.m3u8",
@@ -159,9 +168,9 @@ class SettingsScreen(Screen[None]):
                 id="anilist-account",
             )
             yield Static(
-                "Settings are stored locally. For online playback, configure a direct "
-                "authorized media URL template using {anime_id}, {episode}, {episode_padded}, "
-                "{quality}, or {title}.",
+                "Settings are stored locally. For online playback, configure a Streamlink "
+                "URL template for a supported service, or a direct authorized media URL template "
+                "using {anime_id}, {episode}, {episode_padded}, {quality}, or {title}.",
                 id="settings-status",
             )
 
@@ -190,8 +199,10 @@ class SettingsScreen(Screen[None]):
             except OSError:
                 statuses.append(f"local media path inaccessible • {root}")
 
+        if self.settings.streamlink_url_template:
+            statuses.append("Streamlink URL template configured")
         if self.settings.online_media_url_template:
-            statuses.append("online direct-media template configured")
+            statuses.append("direct online media template configured")
 
         if not statuses:
             return (
@@ -244,6 +255,9 @@ class SettingsScreen(Screen[None]):
         else:
             self.settings.local_media_root = None
 
+        raw_streamlink = self.query_one("#streamlink-url", Input).value.strip()
+        self.settings.streamlink_url_template = raw_streamlink or None
+
         raw_online = self.query_one("#online-media-url", Input).value.strip()
         self.settings.online_media_url_template = raw_online or None
 
@@ -272,6 +286,9 @@ class SettingsScreen(Screen[None]):
             "true" if self.settings.playback.auto_next else "false"
         )
         self.query_one("#local-media-root", Input).value = str(self.settings.local_media_root or "")
+        self.query_one("#streamlink-url", Input).value = (
+            self.settings.streamlink_url_template or ""
+        )
         self.query_one("#online-media-url", Input).value = (
             self.settings.online_media_url_template or ""
         )
