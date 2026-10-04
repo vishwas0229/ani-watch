@@ -31,6 +31,7 @@ def _alembic_config(engine: Engine) -> Config:
         )
 
     config = Config(str(ini_path))
+    config.set_main_option("path_separator", "os")
     config.set_main_option("script_location", str(migrations_dir))
     database_url = engine.url.render_as_string(hide_password=False).replace("%", "%%")
     config.set_main_option("sqlalchemy.url", database_url)
