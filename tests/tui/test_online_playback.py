@@ -1,3 +1,4 @@
+from ani_watch.domain.errors import ProviderError
 from ani_watch.domain.models import EpisodeItem
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.registry import ProviderRegistry
@@ -210,7 +211,7 @@ async def test_watch_online_falls_back_to_browser_when_streamlink_cannot_resolve
             }
 
     async def fail_resolve_url(source_url: str, *, quality: str | None = None):
-        raise RuntimeError("unsupported plugin")
+        raise ProviderError("unsupported plugin")
 
     opened = []
     monkeypatch.setattr(
