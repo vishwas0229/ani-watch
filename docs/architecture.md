@@ -33,7 +33,7 @@ The AniList adapter uses GraphQL requests and maps response data into stable, pr
 SQLAlchemy 2 models and repositories provide the persistence boundary. SQLite is suitable for local use and PostgreSQL is supported through the same interface. Alembic is the canonical schema migration mechanism; the CLI and database bootstrap execute the configured migration revisions instead of maintaining a separate schema-version table.
 
 ### Playback
-The VLC adapter owns libVLC calls. Playback services provide resume, pause, seek, volume, audio/subtitle selection, auto-next configuration, local-first preference, skip hooks and recovery.
+The VLC adapter owns libVLC calls. Playback services provide resume, pause, seek, volume, audio/subtitle selection, auto-next configuration, local-first preference, skip hooks, recovery, periodic progress persistence and completion lifecycle tracking.
 
 ### Providers
 The provider registry owns discovery and configuration order. The resolver provides fallback. Health metrics and circuit breaking isolate unhealthy providers. The local provider is restricted to user-owned files.
