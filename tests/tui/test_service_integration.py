@@ -183,7 +183,7 @@ async def test_history_resume_reuses_saved_position_and_auto_next(tmp_path: Path
     )
 
     async with app.run_test() as pilot:
-        await pilot.push_screen(
+        await app.push_screen(
             HistoryScreen(
                 library_service=library,
                 playback_session=app.playback_session,
