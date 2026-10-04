@@ -57,11 +57,7 @@ class TelegramMediaProvider:
             api_hash = self.credentials.get_api_hash()
         except Exception:
             api_hash = None
-        return bool(
-            self.settings.telegram_api_id
-            and self.settings.telegram_channel
-            and api_hash
-        )
+        return bool(self.settings.telegram_api_id and self.settings.telegram_channel and api_hash)
 
     async def available(self, anime: AnimeRef, episode: EpisodeRef) -> bool:
         """Return whether Telegram is configured as a potential playback source."""
@@ -99,9 +95,7 @@ class TelegramMediaProvider:
         try:
             self._channel = await client.get_entity(channel)
         except Exception as exc:
-            raise ProviderError(
-                f"Telegram channel '{channel}' could not be opened: {exc}"
-            ) from exc
+            raise ProviderError(f"Telegram channel '{channel}' could not be opened: {exc}") from exc
         return self._channel
 
     @classmethod
@@ -195,10 +189,7 @@ class TelegramMediaProvider:
                 and cls._episode_number(text) == episode.number
             )
 
-        return (
-            cls._title_matches(anime.title, text)
-            and cls._episode_number(text) == episode.number
-        )
+        return cls._title_matches(anime.title, text) and cls._episode_number(text) == episode.number
 
     async def _find_message(self, anime: AnimeRef, episode: EpisodeRef):
         entity = await self._entity()

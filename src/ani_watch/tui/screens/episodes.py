@@ -202,11 +202,7 @@ class EpisodeScreen(Screen[None]):
     def _episode_label(episode: EpisodeItem) -> str:
         """Format the visible episode row."""
         title = episode.title.strip() if episode.title else f"Episode {episode.number}"
-        duration = (
-            f" • {episode.duration_minutes}m"
-            if episode.duration_minutes is not None
-            else ""
-        )
+        duration = f" • {episode.duration_minutes}m" if episode.duration_minutes is not None else ""
         state = " • Watched" if episode.watched else ""
         if not episode.available:
             state = " • Unavailable"
@@ -239,8 +235,7 @@ class EpisodeScreen(Screen[None]):
         state = "watched" if episode.watched else "unwatched"
         availability = "unavailable" if not episode.available else state
         self.query_one("#episode-status", Static).update(
-            f"Selected Episode {episode.number}: "
-            f"{episode.title or 'Untitled'} ({availability})."
+            f"Selected Episode {episode.number}: {episode.title or 'Untitled'} ({availability})."
         )
 
     def _clear_selection_classes(self) -> None:
@@ -361,10 +356,7 @@ class EpisodeScreen(Screen[None]):
             status.update(str(exc))
             return
         except Exception:
-            status.update(
-                "Unable to find online streaming links. "
-                "Check your network connection."
-            )
+            status.update("Unable to find online streaming links. Check your network connection.")
             return
 
         links = links_by_episode.get(episode_number, [])
@@ -410,10 +402,7 @@ class EpisodeScreen(Screen[None]):
             return
 
         sites = ", ".join(
-            dict.fromkeys(
-                str(item.get("site") or "unknown provider")
-                for item in links
-            )
+            dict.fromkeys(str(item.get("site") or "unknown provider") for item in links)
         )
         status.update(
             f"No VLC-compatible stream was resolved for Episode {episode_number} "
@@ -444,9 +433,7 @@ class EpisodeScreen(Screen[None]):
     def play_selected(self) -> None:
         """Resolve the selected episode and start VLC playback asynchronously."""
         if not self.episodes:
-            self.query_one("#episode-status", Static).update(
-                "No episode is available to play yet."
-            )
+            self.query_one("#episode-status", Static).update("No episode is available to play yet.")
             return
 
         episode = self.episodes[self._selected_index]

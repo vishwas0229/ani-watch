@@ -22,9 +22,7 @@ async def test_streamlink_provider_resolves_requested_quality(monkeypatch) -> No
         }
 
     monkeypatch.setattr(streamlink_provider.streamlink, "streams", fake_streams)
-    provider = StreamlinkProvider(
-        "https://service.example/watch/{anime_id}/{episode_padded}"
-    )
+    provider = StreamlinkProvider("https://service.example/watch/{anime_id}/{episode_padded}")
 
     candidate = await provider.resolve(
         AnimeRef(42, "Sample Anime"),

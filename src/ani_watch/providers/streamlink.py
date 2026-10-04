@@ -51,8 +51,7 @@ class StreamlinkProvider:
             if root not in self._allowed_fields:
                 allowed = ", ".join(sorted(self._allowed_fields))
                 raise ValueError(
-                    f"Unsupported Streamlink URL placeholder '{field_name}'. "
-                    f"Use only: {allowed}."
+                    f"Unsupported Streamlink URL placeholder '{field_name}'. Use only: {allowed}."
                 )
 
     def _render(self, anime: AnimeRef, episode: EpisodeRef, quality: str | None) -> str:
@@ -138,22 +137,16 @@ class StreamlinkProvider:
         source_url = source_url.strip()
         parsed = urlparse(source_url)
         if parsed.scheme not in cls._allowed_schemes or not parsed.netloc:
-            raise ProviderError(
-                "Streamlink source URL must use a valid http or https URL."
-            )
+            raise ProviderError("Streamlink source URL must use a valid http or https URL.")
 
         try:
             streams = await asyncio.to_thread(streamlink.streams, source_url)
         except Exception as exc:
-            raise ProviderError(
-                f"Streamlink could not resolve the online source: {exc}"
-            ) from exc
+            raise ProviderError(f"Streamlink could not resolve the online source: {exc}") from exc
 
         selected_name, selected = cls._pick_stream(streams, quality)
         if selected is None:
-            raise ProviderError(
-                "Streamlink found no playable streams for the online source."
-            )
+            raise ProviderError("Streamlink found no playable streams for the online source.")
 
         playable_url = getattr(selected, "url", None)
         if not isinstance(playable_url, str) or not playable_url:

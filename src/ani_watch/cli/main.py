@@ -269,9 +269,7 @@ def telegram_status() -> None:
     settings = SettingsStore().load()
     credentials = TelegramCredentialStore()
     configured = bool(
-        settings.telegram_api_id
-        and settings.telegram_channel
-        and credentials.get_api_hash()
+        settings.telegram_api_id and settings.telegram_channel and credentials.get_api_hash()
     )
     if not configured:
         typer.echo("Telegram: not configured. Run 'ani-watch telegram configure'.")
