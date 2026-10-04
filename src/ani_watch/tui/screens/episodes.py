@@ -295,10 +295,19 @@ class EpisodeScreen(Screen[None]):
             resolver = self.app.get_provider_resolver()
         return resolver
 
-    def _has_online_provider(self) -> bool:
-        """Return whether a direct online provider is configured."""
+    def _online_provider_name(self) -> str | None:
+        """Return the preferred configured online provider."""
         resolver = self._provider_resolver()
-        return resolver is not None and resolver.providers.get("online") is not None
+        if resolver is None:
+            return None
+        for provider_name in ("streamlink", "online"):
+            if resolver.providers.get(provider_name) is not None:
+                return provider_name
+        return None
+
+    def _has_online_provider(self) -> bool:
+        """Return whether an online provider is configured."""
+        return self._online_provider_name() is not None
 
     def watch_online(self) -> None:
         """Start direct online playback or open an official streaming page."""
@@ -319,12 +328,14 @@ class EpisodeScreen(Screen[None]):
             )
             return
 
-        if self._has_online_provider():
+        provider_name = self._online_provider_name()
+        if provider_name is not None:
+            label = "Streamlink" if provider_name == "streamlink" else "direct media"
             self.query_one("#episode-status", Static).update(
-                f"Starting online playback for Episode {episode.number}…"
+                f"Starting online playback via {label} for Episode {episode.number}…"
             )
             self.run_worker(
-                self._start_selected(provider_name="online"),
+                self._start_selected(provider_name=provider_name),
                 exclusive=True,
             )
             return
@@ -427,10 +438,16 @@ class EpisodeScreen(Screen[None]):
                 provider_name=provider_name,
             )
         except ProviderError:
+            if provider_name == "streamlink":
+                status.update(
+                    "Streamlink could not resolve this episode. Check Settings → Streamlink URL "
+                    "and make sure the URL belongs to a supported service or direct stream."
+                )
+                return
             if provider_name == "online":
                 status.update(
-                    "Online provider could not resolve this episode. Check Settings → "
-                    "Online media URL and make sure it points to direct media such as an "
+                    "Direct online provider could not resolve this episode. Check Settings → "
+                    "Direct media URL and make sure it points to direct media such as an "
                     "HLS playlist (.m3u8) or video file."
                 )
                 return
