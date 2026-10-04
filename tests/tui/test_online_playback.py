@@ -1,4 +1,4 @@
-from ani_watch.domain.models import AnimeRef, EpisodeItem
+from ani_watch.domain.models import EpisodeItem
 from ani_watch.providers.contracts import MediaCandidate
 from ani_watch.providers.registry import ProviderRegistry
 from ani_watch.tui.app import AniWatchApp
