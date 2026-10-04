@@ -7,7 +7,7 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Label, Static
 
-from ani_watch.domain.errors import AniWatchError
+from ani_watch.domain.errors import AniWatchError, ProviderError
 from ani_watch.domain.models import AnimeRef, EpisodeItem
 from ani_watch.services.playback import PlaybackSession
 
@@ -325,6 +325,14 @@ class EpisodeScreen(Screen[None]):
                 episode_index=self._selected_index,
                 total_episodes=len(self.episodes),
             )
+        except ProviderError:
+            provider_names = ", ".join(self._provider_names()) or "none"
+            status.update(
+                f"Episode {episode.number} could not be resolved by the configured providers "
+                f"({provider_names}). For local playback, set Settings → Local media and use "
+                "a supported filename such as 'Title - 01.mkv' or 'Title/Episode 01.mkv'."
+            )
+            return
         except AniWatchError as exc:
             status.update(str(exc))
             return
