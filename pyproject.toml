@@ -51,6 +51,7 @@ packages = ["src/ani_watch"]
 testpaths = ["tests"]
 addopts = "-q"
 asyncio_mode = "auto"
+markers = ["integration: opt-in online integration checks"]
 
 [tool.ruff]
 line-length = 100
