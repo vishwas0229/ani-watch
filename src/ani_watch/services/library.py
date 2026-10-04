@@ -99,7 +99,7 @@ class LibraryService:
             completed=completed,
         )
 
-        if completed:
+        if completed and not self.history.has_recent_completion(anime_id, episode_number):
             details = self.anime.get(anime_id)
             self.history.record(
                 WatchHistoryEntry(
