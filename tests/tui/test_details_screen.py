@@ -1,5 +1,6 @@
-from ani_watch.config.settings import AppSettings
 from pathlib import Path
+
+from ani_watch.config.settings import AppSettings
 
 from ani_watch.domain.models import AnimeDetails
 from ani_watch.services.library import LibraryService
