@@ -369,13 +369,11 @@ class EpisodeScreen(Screen[None]):
 
         anime = AnimeRef(anilist_id=self.anime_id, title=self.anime_title)
         quality = self._session().manager.quality()
-        streamlink_errors: list[str] = []
         for selected in links:
             url = selected["url"]
             try:
                 candidate = await StreamlinkProvider.resolve_url(url, quality=quality)
-            except ProviderError as exc:
-                streamlink_errors.append(str(exc))
+            except ProviderError:
                 continue
 
             try:
