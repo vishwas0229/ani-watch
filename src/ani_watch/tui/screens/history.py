@@ -129,14 +129,14 @@ class HistoryScreen(Screen[None]):
                 )
                 yield Button("Back", id="back")
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """Load persisted history when no explicit entries were supplied."""
         if self._load_from_storage:
             service = self.library_service
             if service is not None:
                 self.library_service = service
                 self.entries = tuple(service.recently_watched(50))
-                self._rerender()
+                await self._rerender()
         self._focus_selected()
 
 
@@ -157,11 +157,10 @@ class HistoryScreen(Screen[None]):
                 return
             self._select_index(index)
 
-    def _rerender(self) -> None:
+    async def _rerender(self) -> None:
         """Synchronize the mounted history rows with persisted state."""
         history_list = self.query_one("#history-list", VerticalScroll)
-        for child in list(history_list.children):
-            child.remove()
+        await history_list.remove_children()
 
         if not self.entries:
             history_list.mount(
