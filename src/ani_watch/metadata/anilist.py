@@ -49,6 +49,7 @@ query ($id: Int!) {
 EPISODES_QUERY = """
 query ($id: Int!, $page: Int, $perPage: Int) {
   Media(id: $id, type: ANIME) {
+    status
     episodes
     duration
     airingSchedule(page: $page, perPage: $perPage, notYetAired: false) {
