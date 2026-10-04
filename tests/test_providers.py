@@ -65,7 +65,6 @@ class _FailingRoot:
         return [self.path]
 
 
-
 def test_local_provider_accepts_unpadded_and_episode_filename_forms(tmp_path) -> None:
     path = tmp_path / "naruto-shippuden-1.mkv"
     path.touch()
