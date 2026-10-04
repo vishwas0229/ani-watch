@@ -62,9 +62,7 @@ def test_bootstrap_registers_online_provider_and_respects_local_first(tmp_path: 
 
 
 def test_bootstrap_wraps_invalid_online_template_as_configuration_error() -> None:
-    settings = AppSettings(
-        online_media_url_template="https://media.example/{unsupported}.m3u8"
-    )
+    settings = AppSettings(online_media_url_template="https://media.example/{unsupported}.m3u8")
 
     with pytest.raises(ConfigurationError, match="Unsupported online URL placeholder"):
         build_provider_registry(settings)
