@@ -109,9 +109,9 @@ class LibraryScreen(Screen[None]):
             watched_episodes=service.statistics()["watched_episodes"],
             favorites=service.statistics()["favorites"],
         )
-        self._rerender()
+        await self._rerender()
 
-    def _rerender(self) -> None:
+    async def _rerender(self) -> None:
         """Refresh all library widgets from the current snapshot."""
         self.query_one("#library-summary", Static).update(self._summary())
         continue_list = self.query_one("#continue-list", VerticalScroll)
