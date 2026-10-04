@@ -86,7 +86,7 @@ class SettingsScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         """Render editable settings with responsive layout."""
-        telegram_hash_configured = bool(TelegramCredentialStore().get_api_hash())
+        telegram_hash_configured = self._telegram_hash_configured()
         with Vertical(id="settings-page"):
             yield Label("SETTINGS", id="settings-heading")
 
@@ -245,7 +245,7 @@ class SettingsScreen(Screen[None]):
             statuses.append("online direct-media template configured")
 
         if self.settings.telegram_api_id and self.settings.telegram_channel:
-            if TelegramCredentialStore().get_api_hash():
+            if self._telegram_hash_configured():
                 statuses.append("Telegram personal media configured")
             else:
                 statuses.append("Telegram API hash missing")
@@ -255,6 +255,13 @@ class SettingsScreen(Screen[None]):
                 "Streamlink URL, or Direct media URL for an authorized source."
             )
         return "Playback providers: " + " • ".join(statuses)
+
+    @staticmethod
+    def _telegram_hash_configured() -> bool:
+        try:
+            return bool(TelegramCredentialStore().get_api_hash())
+        except Exception:
+            return False
 
     @staticmethod
     def _account_status() -> str:
@@ -365,8 +372,7 @@ class SettingsScreen(Screen[None]):
             app.playback_session = None
         apply_theme = getattr(self.app, "apply_theme", None)
         if callable(apply_theme):
-            apply_theme(self.settings.ui.theme
-        )
+            apply_theme(self.settings.ui.theme)
         self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(
             "Settings saved. Run 'ani-watch telegram login' once to authorize Telegram."
