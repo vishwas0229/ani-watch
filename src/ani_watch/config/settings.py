@@ -37,13 +37,14 @@ class NetworkSettings(BaseModel):
 
 
 class AppSettings(BaseModel):
+    database_url: str = "sqlite:///" + str(user_data_path("ani-watch") / "ani-watch.db")
     playback: PlaybackSettings = Field(default_factory=PlaybackSettings)
     ui: UISettings = Field(default_factory=UISettings)
     network: NetworkSettings = Field(default_factory=NetworkSettings)
-    database_url: str = "sqlite:///" + str(user_data_path("ani-watch") / "ani-watch.db")
     redis_url: str | None = None
     anilist_client_id: str | None = None
     anilist_client_secret: str | None = None
     anilist_redirect_uri: str = "http://localhost:8080/callback"
     local_media_root: Path | None = None
+    online_media_url_template: str | None = None
     provider_enabled: bool = True
