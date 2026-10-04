@@ -50,7 +50,7 @@ async def test_details_screen_empty_state_disables_metadata_actions() -> None:
 
 
 async def test_favorite_action_persists_state() -> None:
-    app = AniWatchApp()
+    app = AniWatchApp(settings=AppSettings(database_url="sqlite:///:memory:"))
 
     async with app.run_test() as pilot:
         await app.push_screen(AnimeDetailsScreen(sample_anime()))
