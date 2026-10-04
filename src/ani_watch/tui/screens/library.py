@@ -90,12 +90,12 @@ class LibraryScreen(Screen[None]):
                 yield Button("Refresh", id="refresh")
                 yield Button("Back", id="back")
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """Load the latest persisted library state when no snapshot was supplied."""
         if self._load_from_storage:
-            self.refresh()
+            await self.refresh()
 
-    def refresh(self) -> None:
+    async def refresh(self) -> None:
         """Re-query persistent state and rebuild the library dashboard."""
         service = self.library_service
         if service is None:
@@ -117,10 +117,8 @@ class LibraryScreen(Screen[None]):
         continue_list = self.query_one("#continue-list", VerticalScroll)
         recent_list = self.query_one("#recent-list", VerticalScroll)
 
-        for child in list(continue_list.children):
-            child.remove()
-        for child in list(recent_list.children):
-            child.remove()
+        await continue_list.remove_children()
+        await recent_list.remove_children()
 
         if self.snapshot.continue_watching:
             for item in self.snapshot.continue_watching:
@@ -155,7 +153,7 @@ class LibraryScreen(Screen[None]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "refresh":
-            self.refresh()
+            self.run_worker(self.refresh(), exclusive=True)
         elif event.button.id == "back":
             self.app.pop_screen()
 
