@@ -1,3 +1,4 @@
+from ani_watch.config.settings import AppSettings
 from ani_watch.domain.models import AnimeDetails
 from ani_watch.tui.app import AniWatchApp
 from ani_watch.tui.screens.details import AnimeDetailsScreen
@@ -20,7 +21,7 @@ def sample_anime() -> AnimeDetails:
 
 
 async def test_details_screen_renders_metadata() -> None:
-    app = AniWatchApp()
+    app = AniWatchApp(settings=AppSettings(database_url="sqlite:///:memory:"))
 
     async with app.run_test() as pilot:
         await app.push_screen(AnimeDetailsScreen(sample_anime()))
@@ -48,7 +49,7 @@ async def test_details_screen_empty_state_disables_metadata_actions() -> None:
         assert app.screen.query_one("#favorite").disabled
 
 
-async def test_favorite_action_toggles_local_state() -> None:
+async def test_favorite_action_persists_state() -> None:
     app = AniWatchApp()
 
     async with app.run_test() as pilot:
@@ -60,13 +61,11 @@ async def test_favorite_action_toggles_local_state() -> None:
 
         await pilot.press("t")
         assert str(favorite.label) == "Unfavorite"
-        assert "added to favorites locally" in str(app.screen.query_one("#details-status").content)
+        assert "added to favorites" in str(app.screen.query_one("#details-status").content)
 
         await pilot.press("t")
         assert str(favorite.label) == "Favorite"
-        assert "removed from favorites locally" in str(
-            app.screen.query_one("#details-status").content
-        )
+        assert "removed from favorites" in str(app.screen.query_one("#details-status").content)
 
 
 async def test_details_screen_back_button_returns_home() -> None:
