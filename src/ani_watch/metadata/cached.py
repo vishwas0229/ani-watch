@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ani_watch.domain.errors import OfflineError
@@ -95,6 +96,45 @@ class CachedMetadataService:
             },
         )
         return details
+
+    async def streaming_episodes(self, anime_id: int) -> dict[int, list[dict[str, str]]]:
+        """Return legal external streaming links grouped by episode number."""
+        key = f"streaming-episodes:{anime_id}"
+        cached = self.cache.get(key)
+        if cached is not None:
+            return {
+                int(number): [dict(item) for item in items]
+                for number, items in cached.items()
+            }
+
+        if self.offline:
+            raise OfflineError(
+                "Offline mode is enabled and online streaming links are not cached locally."
+            )
+
+        links: dict[int, list[dict[str, str]]] = {}
+        for item in await self.client.streaming_episodes(anime_id):
+            title = self._text(item.get("title")) or ""
+            url = self._text(item.get("url"))
+            site = self._text(item.get("site")) or "Online"
+            if not url:
+                continue
+            match = re.search(r"(?:episode|ep)\\s*[-#]?\\s*(\\d+)", title, re.IGNORECASE)
+            if match is None:
+                match = re.search(r"\\b(\\d{1,4})\\b", title)
+            if match is None:
+                continue
+            number = int(match.group(1))
+            links.setdefault(number, []).append(
+                {
+                    "title": title,
+                    "url": url,
+                    "site": site,
+                }
+            )
+
+        self.cache.set(key, links)
+        return links
 
     async def episode_items(self, anime_id: int) -> list[EpisodeItem]:
         """Return cached/provider-neutral episode rows for one anime."""
