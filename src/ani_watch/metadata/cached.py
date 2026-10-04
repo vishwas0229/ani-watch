@@ -119,9 +119,9 @@ class CachedMetadataService:
             site = self._text(item.get("site")) or "Online"
             if not url:
                 continue
-            match = re.search(r"(?:episode|ep)\\s*[-#]?\\s*(\\d+)", title, re.IGNORECASE)
+            match = re.search(r"(?:episode|ep)\s*[-#]?\s*(\d+)", title, re.IGNORECASE)
             if match is None:
-                match = re.search(r"\\b(\\d{1,4})\\b", title)
+                match = re.search(r"\b(\d{1,4})\b", title)
             if match is None:
                 continue
             number = int(match.group(1))
