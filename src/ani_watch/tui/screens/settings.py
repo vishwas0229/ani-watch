@@ -141,6 +141,24 @@ class SettingsScreen(Screen[None]):
                     classes="setting-control",
                 )
 
+            with Horizontal(classes="setting-row"):
+                yield Label("Streamlink URL", classes="setting-label")
+                yield Input(
+                    value=self.settings.streamlink_url_template or "",
+                    placeholder="https://service.example/watch/{anime_id}/{episode}",
+                    id="streamlink-url",
+                    classes="setting-control",
+                )
+
+            with Horizontal(classes="setting-row"):
+                yield Label("Direct media URL", classes="setting-label")
+                yield Input(
+                    value=self.settings.online_media_url_template or "",
+                    placeholder="https://media.example/{anime_id}/{episode}.m3u8",
+                    id="online-media-url",
+                    classes="setting-control",
+                )
+
             yield Static(
                 self._provider_status(),
                 id="provider-status",
@@ -150,8 +168,9 @@ class SettingsScreen(Screen[None]):
                 id="anilist-account",
             )
             yield Static(
-                "Settings are stored locally. Use 'ani-watch auth login', "
-                "'auth logout', 'auth status', or 'auth sync' for AniList account actions.",
+                "Settings are stored locally. For online playback, configure a Streamlink "
+                "URL template for a supported service, or a direct authorized media URL template "
+                "using {anime_id}, {episode}, {episode_padded}, {quality}, or {title}.",
                 id="settings-status",
             )
 
@@ -166,23 +185,32 @@ class SettingsScreen(Screen[None]):
         self.query_one("#anilist-account", Static).update(self._account_status())
 
     def _provider_status(self) -> str:
-        """Return actionable status for the configured playback provider."""
+        """Return actionable status for the configured playback providers."""
+        statuses: list[str] = []
+
         root = self.settings.local_media_root
-        if root is None:
+        if root is not None:
+            try:
+                root = root.expanduser()
+                if root.is_dir():
+                    statuses.append(f"local media ready • {root}")
+                else:
+                    statuses.append(f"local media path unavailable • {root}")
+            except OSError:
+                statuses.append(f"local media path inaccessible • {root}")
+
+        if self.settings.streamlink_url_template:
+            statuses.append("Streamlink URL template configured")
+        if self.settings.online_media_url_template:
+            statuses.append("online direct-media template configured")
+
+        if not statuses:
             return (
-                "Playback provider: not configured. Set Local media to a folder containing "
-                "authorized/user-owned media."
+                "Playback provider: not configured. Set Local media for user-owned files, "
+                "Streamlink URL for a supported service, or Direct media URL for an "
+                "authorized media endpoint."
             )
-        try:
-            root = root.expanduser()
-            if root.is_dir():
-                return f"Playback provider: local media ready • {root}"
-            return (
-                "Playback provider: local media path does not exist or is not a directory • "
-                f"{root}"
-            )
-        except OSError:
-            return f"Playback provider: unable to access local media path • {root}"
+        return "Playback providers: " + " • ".join(statuses)
 
     @staticmethod
     def _account_status() -> str:
@@ -228,6 +256,12 @@ class SettingsScreen(Screen[None]):
         else:
             self.settings.local_media_root = None
 
+        raw_streamlink = self.query_one("#streamlink-url", Input).value.strip()
+        self.settings.streamlink_url_template = raw_streamlink or None
+
+        raw_online = self.query_one("#online-media-url", Input).value.strip()
+        self.settings.online_media_url_template = raw_online or None
+
         self.store.save(self.settings)
         app = self.app
         if hasattr(app, "settings"):
@@ -252,8 +286,12 @@ class SettingsScreen(Screen[None]):
         self.query_one("#auto-next", Select).value = (
             "true" if self.settings.playback.auto_next else "false"
         )
-        self.query_one("#local-media-root", Input).value = str(
-            self.settings.local_media_root or ""
+        self.query_one("#local-media-root", Input).value = str(self.settings.local_media_root or "")
+        self.query_one("#streamlink-url", Input).value = (
+            self.settings.streamlink_url_template or ""
+        )
+        self.query_one("#online-media-url", Input).value = (
+            self.settings.online_media_url_template or ""
         )
         self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(

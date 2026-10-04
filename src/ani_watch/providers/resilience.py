@@ -91,9 +91,18 @@ class ProviderResolver:
         episode: EpisodeRef,
         *,
         quality: str | None = None,
+        provider_name: str | None = None,
     ) -> MediaCandidate:
+        if provider_name is not None:
+            provider = self.providers.get(provider_name)
+            if provider is None:
+                raise ProviderError(f"Provider '{provider_name}' is not configured.")
+            providers = (provider,)
+        else:
+            providers = self.providers.ordered()
+
         last_error: Exception | None = None
-        for provider in self.providers.ordered():
+        for provider in providers:
             if not self.breaker.allow(provider.name):
                 continue
             try:
@@ -114,7 +123,10 @@ class ProviderResolver:
                 self.health.failure(provider.name)
                 self.breaker.failure(provider.name)
 
-        message = "No configured provider could resolve the episode."
+        if provider_name is not None:
+            message = f"Provider '{provider_name}' could not resolve the episode."
+        else:
+            message = "No configured provider could resolve the episode."
         if last_error:
             message += f" Last error: {last_error}"
         raise ProviderError(message)

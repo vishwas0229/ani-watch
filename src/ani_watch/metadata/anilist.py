@@ -186,11 +186,7 @@ class AniListClient:
         if not isinstance(media, dict):
             raise MetadataError(f"AniList anime {anime_id} was not found.")
         episodes = media.get("streamingEpisodes") or []
-        return [
-            item
-            for item in episodes
-            if isinstance(item, dict) and item.get("url")
-        ]
+        return [item for item in episodes if isinstance(item, dict) and item.get("url")]
 
     async def episodes(
         self,

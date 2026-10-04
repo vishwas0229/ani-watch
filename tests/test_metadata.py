@@ -287,7 +287,6 @@ async def test_anilist_authenticated_request_maps_unauthorized_to_authentication
         await client.search("x")
 
 
-
 async def test_anilist_streaming_episodes_returns_legal_links() -> None:
     payload = {
         "data": {

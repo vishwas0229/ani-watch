@@ -127,7 +127,6 @@ async def test_episode_screen_escape_returns_home() -> None:
         assert not isinstance(app.screen, EpisodeScreen)
 
 
-
 async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
     class FakeMetadataService:
         async def streaming_episodes(self, anime_id: int):
@@ -162,6 +161,4 @@ async def test_watch_online_opens_anilist_streaming_link(monkeypatch) -> None:
         await pilot.pause()
 
         assert opened == ["https://example.com/watch/1"]
-        assert "Opened Episode 1 on Example" in str(
-            app.screen.query_one("#episode-status").content
-        )
+        assert "Opened Episode 1 on Example" in str(app.screen.query_one("#episode-status").content)

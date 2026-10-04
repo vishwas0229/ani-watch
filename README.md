@@ -35,6 +35,7 @@ python main.py
 - Resume playback, auto-next configuration, skip hooks, local-first preference and recovery
 - Provider registry, resolver fallback, health monitoring and circuit breaking
 - Built-in local-file provider for user-owned media
+- Streamlink-backed online playback for supported services/protocols, with direct-media fallback
 - AniList OAuth login helpers, secure OS credential storage, list sync and mutations
 - Memory cache, optional Redis cache, timeout/retry handling, rate-limit handling and offline/degraded mode
 - Conda installers for Linux, macOS and Windows
@@ -53,6 +54,7 @@ Important runtime settings include:
 - database URL
 - optional Redis URL
 - local media root
+- Streamlink URL template and optional direct online media URL template
 - playback quality, audio, subtitle, volume, auto-next and local-first preferences
 - UI theme and density
 - HTTP timeout and retry count

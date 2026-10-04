@@ -102,10 +102,7 @@ class CachedMetadataService:
         key = f"streaming-episodes:{anime_id}"
         cached = self.cache.get(key)
         if cached is not None:
-            return {
-                int(number): [dict(item) for item in items]
-                for number, items in cached.items()
-            }
+            return {int(number): [dict(item) for item in items] for number, items in cached.items()}
 
         if self.offline:
             raise OfflineError(
