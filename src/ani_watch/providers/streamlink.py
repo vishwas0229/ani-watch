@@ -65,9 +65,7 @@ class StreamlinkProvider:
                 title=quote(anime.title, safe=""),
             ).strip()
         except (KeyError, ValueError) as exc:
-            raise ProviderError(
-                "The Streamlink URL template could not be rendered."
-            ) from exc
+            raise ProviderError("The Streamlink URL template could not be rendered.") from exc
 
         parsed = urlparse(uri)
         if parsed.scheme not in self._allowed_schemes:
@@ -140,7 +138,9 @@ class StreamlinkProvider:
         source_url = source_url.strip()
         parsed = urlparse(source_url)
         if parsed.scheme not in cls._allowed_schemes or not parsed.netloc:
-            raise ProviderError("Streamlink source URL must use a valid http or https URL.")
+            raise ProviderError(
+                "Streamlink source URL must use a valid http or https URL."
+            )
 
         try:
             streams = await asyncio.to_thread(streamlink.streams, source_url)
@@ -151,7 +151,9 @@ class StreamlinkProvider:
 
         selected_name, selected = cls._pick_stream(streams, quality)
         if selected is None:
-            raise ProviderError("Streamlink found no playable streams for the online source.")
+            raise ProviderError(
+                "Streamlink found no playable streams for the online source."
+            )
 
         playable_url = getattr(selected, "url", None)
         if not isinstance(playable_url, str) or not playable_url:
