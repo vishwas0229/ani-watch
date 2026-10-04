@@ -1,6 +1,6 @@
 """AniList OAuth2 token storage and authorization helpers."""
 
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
 import keyring
@@ -42,6 +42,28 @@ class AniListOAuth:
         }
         return f"{cls.AUTHORIZE_URL}?{urlencode(params)}"
 
+    @classmethod
+    def extract_code(cls, value: str) -> str:
+        """Extract an OAuth code from a raw code or callback URL."""
+        value = value.strip()
+        if not value:
+            raise AuthenticationError("An AniList authorization code is required.")
+
+        parsed = urlparse(value)
+        if parsed.query:
+            code = parse_qs(parsed.query).get("code", [None])[0]
+            if code:
+                return str(code)
+
+        if parsed.fragment:
+            code = parse_qs(parsed.fragment).get("code", [None])[0]
+            if code:
+                return str(code)
+
+        if "://" in value:
+            raise AuthenticationError("The callback URL does not contain an authorization code.")
+        return value
+
     async def exchange_code(
         self,
         client_id: str,
@@ -49,6 +71,11 @@ class AniListOAuth:
         redirect_uri: str,
         code: str,
     ) -> str:
+        code = self.extract_code(code)
+        if not client_id or not client_secret or not redirect_uri:
+            raise AuthenticationError(
+                "AniList client ID, client secret, and redirect URI are required."
+            )
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 response = await client.post(
