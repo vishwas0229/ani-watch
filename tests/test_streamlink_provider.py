@@ -109,3 +109,24 @@ async def test_streamlink_provider_resolve_url_uses_instance(monkeypatch) -> Non
 
     assert candidate.uri == "https://cdn.example/episode.m3u8"
     assert candidate.provider == "streamlink"
+
+
+async def test_streamlink_provider_resolve_url_supports_class_call(monkeypatch) -> None:
+    monkeypatch.setattr(
+        streamlink_provider.streamlink,
+        "streams",
+        lambda url: {
+            "best": SimpleNamespace(url="https://cdn.example/class-call.m3u8"),
+        },
+    )
+
+    candidate = await StreamlinkProvider.resolve_url(
+        "https://service.example/watch/1",
+        quality="auto",
+    )
+
+    assert candidate == MediaCandidate(
+        uri="https://cdn.example/class-call.m3u8",
+        provider="streamlink",
+        quality="best",
+    )
