@@ -107,7 +107,11 @@ class SettingsScreen(Screen[None]):
             with Horizontal(classes="setting-row"):
                 yield Label("Density", classes="setting-label")
                 yield Select(
-                    [("Compact", "compact"), ("Normal", "normal"), ("Comfortable", "comfortable")],
+                    [
+                        ("Compact", "compact"),
+                        ("Normal", "normal"),
+                        ("Comfortable", "comfortable"),
+                    ],
                     value=self.settings.ui.density,
                     id="density",
                     classes="setting-control",
@@ -117,7 +121,12 @@ class SettingsScreen(Screen[None]):
             with Horizontal(classes="setting-row"):
                 yield Label("Quality", classes="setting-label")
                 yield Select(
-                    [("1080p", "1080p"), ("720p", "720p"), ("480p", "480p"), ("Auto", "auto")],
+                    [
+                        ("1080p", "1080p"),
+                        ("720p", "720p"),
+                        ("480p", "480p"),
+                        ("Auto", "auto"),
+                    ],
                     value=self.settings.playback.quality,
                     id="quality",
                     classes="setting-control",
@@ -388,17 +397,25 @@ class SettingsScreen(Screen[None]):
         self.query_one("#auto-next", Select).value = (
             "true" if self.settings.playback.auto_next else "false"
         )
-        self.query_one("#local-media-root", Input).value = str(self.settings.local_media_root or "")
+        self.query_one("#local-media-root", Input).value = str(
+            self.settings.local_media_root or ""
+        )
         self.query_one("#streamlink-url", Input).value = (
             self.settings.streamlink_url_template or ""
         )
         self.query_one("#online-media-url", Input).value = (
             self.settings.online_media_url_template or ""
         )
-        self.query_one("#telegram-api-id", Input).value = str(self.settings.telegram_api_id or "")
+        self.query_one("#telegram-api-id", Input).value = str(
+            self.settings.telegram_api_id or ""
+        )
         self.query_one("#telegram-api-hash", Input).value = ""
-        self.query_one("#telegram-channel", Input).value = self.settings.telegram_channel or ""
-        self.query_one("#telegram-scan-limit", Input).value = str(self.settings.telegram_scan_limit)
+        self.query_one("#telegram-channel", Input).value = (
+            self.settings.telegram_channel or ""
+        )
+        self.query_one("#telegram-scan-limit", Input).value = str(
+            self.settings.telegram_scan_limit
+        )
         self.query_one("#provider-status", Static).update(self._provider_status())
         self.query_one("#settings-status", Static).update(
             "Settings reset. Press Save to persist the defaults."
