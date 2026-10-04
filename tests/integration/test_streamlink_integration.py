@@ -6,7 +6,9 @@ import os
 from urllib.parse import urlparse
 
 import pytest
-import streamlink
+
+from ani_watch.domain.models import AnimeRef, EpisodeRef
+from ani_watch.providers.streamlink import StreamlinkProvider
 
 PUBLIC_HLS_SAMPLE = (
     "https://devstreaming-cdn.apple.com/videos/streaming/examples/"
@@ -15,21 +17,19 @@ PUBLIC_HLS_SAMPLE = (
 
 
 @pytest.mark.integration
-def test_streamlink_resolves_public_hls_sample() -> None:
-    """Resolve a public HLS sample through the real Streamlink library."""
+async def test_streamlink_provider_resolves_public_hls_sample() -> None:
+    """Resolve a public HLS sample through the real Streamlink provider."""
     if os.getenv("ANI_WATCH_RUN_ONLINE_TESTS") != "1":
         pytest.skip("Set ANI_WATCH_RUN_ONLINE_TESTS=1 to run network integration tests.")
 
-    streams = streamlink.streams(PUBLIC_HLS_SAMPLE)
-    assert streams, "Streamlink returned no streams for the public HLS sample."
+    provider = StreamlinkProvider(PUBLIC_HLS_SAMPLE)
+    candidate = await provider.resolve(
+        AnimeRef(1, "Streamlink Integration Sample"),
+        EpisodeRef(1, 1),
+        quality="auto",
+    )
 
-    best = streams.get("best")
-    if best is None:
-        best = next(iter(streams.values()))
-
-    url = getattr(best, "url", None)
-    assert isinstance(url, str) and url, "Resolved stream did not expose a playable URL."
-
-    parsed = urlparse(url)
+    parsed = urlparse(candidate.uri)
     assert parsed.scheme in {"http", "https"}
     assert parsed.netloc
+    assert candidate.provider == "streamlink"
