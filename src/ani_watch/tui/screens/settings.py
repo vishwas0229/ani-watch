@@ -206,8 +206,9 @@ class SettingsScreen(Screen[None]):
 
         if not statuses:
             return (
-                "Playback provider: not configured. Set Local media for user-owned files "
-                "or Online media URL for a direct authorized media endpoint."
+                "Playback provider: not configured. Set Local media for user-owned files, "
+                "Streamlink URL for a supported service, or Direct media URL for an "
+                "authorized media endpoint."
             )
         return "Playback providers: " + " • ".join(statuses)
 
