@@ -6,8 +6,8 @@ from ani_watch.config.settings import AppSettings
 from ani_watch.domain.errors import ConfigurationError
 from ani_watch.providers.local import LocalFileProvider
 from ani_watch.providers.online import DirectUrlProvider
-from ani_watch.providers.streamlink import StreamlinkProvider
 from ani_watch.providers.registry import ProviderRegistry
+from ani_watch.providers.streamlink import StreamlinkProvider
 
 
 def build_provider_registry(settings: AppSettings) -> ProviderRegistry:
