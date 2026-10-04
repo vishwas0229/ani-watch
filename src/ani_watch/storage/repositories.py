@@ -206,7 +206,6 @@ class HistoryRepository:
             )
 
 
-
 class ProgressRepository:
     """Persist playback position and completion state."""
 
