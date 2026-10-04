@@ -137,7 +137,11 @@ class TelegramStreamingGateway:
             lines.append(f"Content-Range: bytes {start}-{end}/{size}")
         return ("\r\n".join(lines) + "\r\n\r\n").encode("ascii", "strict")
 
-    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def _handle_client(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
         """Handle one VLC HTTP request and stream only the requested byte range."""
         response_started = False
         try:
@@ -171,7 +175,11 @@ class TelegramStreamingGateway:
                 return
 
             if method not in {"GET", "HEAD"}:
-                await self._write_status(writer, "405 Method Not Allowed", extra=b"Allow: GET, HEAD\r\n")
+                await self._write_status(
+                    writer,
+                    "405 Method Not Allowed",
+                    extra=b"Allow: GET, HEAD\r\n",
+                )
                 return
 
             try:
