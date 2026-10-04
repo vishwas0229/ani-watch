@@ -73,5 +73,5 @@ python scripts/streamlink_vlc_smoke.py --seconds 5
 
 The integration test is opt-in so normal CI remains deterministic. Streamlink documents that `streamlink.streams()` returns Stream objects and that HLS streams expose a `url` attribute suitable for playback. See the Streamlink Python API documentation.
 
-Use only media endpoints you are authorized to access. An external watch page is not automatically a direct media URL, and Ani-Watch does not implement DRM bypassing or unauthorized source scraping.
+Use only media endpoints you are authorized to access. A listed watch page is only attempted through Streamlink when automatic online playback is used. Ani-Watch does not silently launch an unsupported browser page: when no VLC-compatible stream can be resolved, the TUI reports the supported/unsupported sources and asks for a supported Streamlink URL or authorized direct media URL. Ani-Watch does not implement DRM bypassing or unauthorized source scraping.
 

@@ -1,6 +1,5 @@
 """Episode selection screen for Ani-Watch."""
 
-import webbrowser
 from collections.abc import Sequence
 
 from textual.app import ComposeResult
@@ -402,20 +401,16 @@ class EpisodeScreen(Screen[None]):
             )
             return
 
-        selected = links[0]
-        url = selected["url"]
-        try:
-            opened = webbrowser.open(url)
-        except Exception:
-            opened = False
-        if not opened:
-            status.update(f"Open this streaming page in your browser: {url}")
-            return
-
-        site = selected.get("site") or "online provider"
+        sites = ", ".join(
+            dict.fromkeys(
+                str(item.get("site") or "unknown provider")
+                for item in links
+            )
+        )
         status.update(
-            f"Streamlink could not resolve a VLC-playable stream; opened Episode "
-            f"{episode_number} on {site} in your browser."
+            f"No VLC-compatible stream was resolved for Episode {episode_number} "
+            f"from AniList sources ({sites}). Configure a supported Streamlink URL "
+            "or an authorized direct media URL in Settings."
         )
 
     def _provider_names(self) -> tuple[str, ...]:
