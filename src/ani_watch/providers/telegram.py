@@ -52,10 +52,14 @@ class TelegramMediaProvider:
 
     @property
     def configured(self) -> bool:
+        try:
+            api_hash = self.credentials.get_api_hash()
+        except Exception:
+            api_hash = None
         return bool(
             self.settings.telegram_api_id
             and self.settings.telegram_channel
-            and self.credentials.get_api_hash()
+            and api_hash
         )
 
     async def available(self, anime: AnimeRef, episode: EpisodeRef) -> bool:
@@ -126,6 +130,17 @@ class TelegramMediaProvider:
         file = getattr(message, "file", None)
         value = getattr(file, "mime_type", None)
         return str(value).strip() if value else "application/octet-stream"
+
+    @classmethod
+    def _is_streamable_media(cls, message: Any) -> bool:
+        file = getattr(message, "file", None)
+        mime_type = str(getattr(file, "mime_type", "") or "").casefold()
+        if mime_type.startswith("video/"):
+            return True
+        if getattr(message, "video", None) is not None:
+            return True
+        name = cls._file_name(message).casefold()
+        return name.endswith((".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi", ".ts"))
 
     @classmethod
     def _anime_id_tag(cls, text: str) -> int | None:
@@ -207,7 +222,7 @@ class TelegramMediaProvider:
         results: list[dict[str, object]] = []
         async for message in client.iter_messages(entity, limit=limit or self.scan_limit):
             size = self._file_size(message)
-            if size <= 0:
+            if size <= 0 or not self._is_streamable_media(message):
                 continue
             file = getattr(message, "file", None)
             duration = getattr(file, "duration", None)
