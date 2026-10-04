@@ -22,6 +22,17 @@ The runtime requires an active Conda environment. The repository's default envir
 
 Unsupported values are rejected during configuration validation. When a persisted TOML file is invalid, Ani-Watch reports a configuration error rather than exposing the underlying validation payload; edit or remove the configuration file and restart to recover with typed defaults. New UI or playback modes must be added to the typed settings model and the corresponding TUI controls before they can be persisted.
 
+
+### AniList authentication
+
+Set the AniList OAuth application values in the configuration:
+
+- `anilist_client_id`
+- `anilist_client_secret`
+- `anilist_redirect_uri`
+
+Run `ani-watch auth login` to authorize the account. The command accepts either the authorization code or the complete callback URL. Use `ani-watch auth status` to verify the stored credential without exposing it. Use `ani-watch auth logout` to remove the credential.
+
 ### SQLite initialization
 
 For a file-backed SQLite URL, Ani-Watch creates the database's parent directory automatically before opening the engine. This allows a fresh installation to use the default platform data path without requiring a manual directory-creation step.
