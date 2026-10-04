@@ -3,6 +3,7 @@
 ## 0.2.0 - 2026-10-03
 
 ### Added
+- AniList authentication CLI commands with secure token storage and progress synchronization.
 - Conda-only runtime and reproducible environment definition.
 - Textual home, search, details, episodes, history, favorites, library, and settings screens.
 - AniList GraphQL metadata client with retries, timeout handling and rate-limit errors.
