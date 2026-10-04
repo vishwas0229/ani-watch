@@ -124,14 +124,14 @@ class FavoritesScreen(Screen[None]):
                 )
                 yield Button("Back", id="back")
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """Load persisted favorites when no explicit snapshot was supplied."""
         if self._load_from_storage:
             service = self.library_service
             if service is not None:
                 self.library_service = service
                 self.favorites = service.favorite_entries()
-                self._rerender()
+                await self._rerender()
         self._focus_selected()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -154,11 +154,10 @@ class FavoritesScreen(Screen[None]):
                 return
             self._select_index(index)
 
-    def _rerender(self) -> None:
+    async def _rerender(self) -> None:
         """Synchronize the mounted favorite rows with persisted state."""
         favorites_list = self.query_one("#favorites-list", VerticalScroll)
-        for child in list(favorites_list.children):
-            child.remove()
+        await favorites_list.remove_children()
 
         if not self.favorites:
             favorites_list.mount(
