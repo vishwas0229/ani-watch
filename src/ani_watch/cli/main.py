@@ -20,6 +20,7 @@ app = typer.Typer(
 )
 
 db_app = typer.Typer(help="Database administration commands.")
+auth_app = typer.Typer(help="AniList authentication and sync commands.")
 app.add_typer(db_app, name="db")
 app.add_typer(auth_app, name="auth")
 
