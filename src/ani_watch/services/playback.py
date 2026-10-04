@@ -6,6 +6,7 @@ from collections.abc import Callable
 from ani_watch.config.settings import PlaybackSettings
 from ani_watch.domain.errors import PlaybackError
 from ani_watch.player.vlc import VlcPlayer
+from ani_watch.providers.contracts import MediaCandidate
 
 
 class PlaybackHooks:
@@ -148,6 +149,24 @@ class PlaybackSession:
             EpisodeRef(anime_id=anime.anilist_id, number=episode.number),
             **resolve_kwargs,
         )
+        return self.start_candidate(
+            anime,
+            episode,
+            candidate,
+            episode_index=episode_index,
+            total_episodes=total_episodes,
+        )
+
+    def start_candidate(
+        self,
+        anime,
+        episode,
+        candidate: MediaCandidate,
+        *,
+        episode_index: int = 0,
+        total_episodes: int = 1,
+    ) -> MediaCandidate:
+        """Start an already-resolved candidate while preserving resume tracking."""
         progress = self.library.progress.get(anime.anilist_id, episode.number)
         resume_seconds = 0
         if progress is not None and not progress.completed:
