@@ -127,6 +127,7 @@ def test_continue_watching_projection_includes_anime_title(tmp_path: Path) -> No
     assert item.position_seconds == 300
     assert item.duration_seconds == 1200
 
+
 def test_completion_history_is_idempotent(tmp_path: Path) -> None:
     db = make_db(tmp_path)
     AnimeRepository(db).upsert(AnimeDetails(anilist_id=6, title="Completed Anime"))
